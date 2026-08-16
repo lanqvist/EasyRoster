@@ -54,6 +54,20 @@ export const AppConfigSchema = z.object({
   /** Путь к папке _retail_ (для генерации db.lua и чтения SavedVariables). */
   wowRetailPath: z.string().default(""),
 
+  /** Текущий сезон: какие инстансы считаем источниками BiS. Пусто → автоопределение из данных Raidbots. */
+  season: z
+    .object({
+      /** id рейдов сезона (journal instance id, напр. 1320 = The Venomous Abyss) */
+      raidInstanceIds: z.array(z.number().int()).default([]),
+      /** id подземелий M+ сезона (journal instance id) */
+      dungeonInstanceIds: z.array(z.number().int()).default([]),
+      /** Raidbots seasonId для треков (37 = Midnight S2) */
+      seasonId: z.number().int().nullable().default(null),
+      /** подпись сезона для UI */
+      label: z.string().default(""),
+    })
+    .default({}),
+
   sync: z
     .object({
       /** интервал автосинка персонажей, минуты; 0 = выключено */

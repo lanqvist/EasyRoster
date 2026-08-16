@@ -68,6 +68,47 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (character_id, slot)
   );
   `,
+  // v3 — фаза 2: справочники предметов и лут-таблиц (Raidbots static data)
+  `
+  CREATE TABLE IF NOT EXISTS items (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,                   -- en
+    name_ru TEXT,
+    icon TEXT,
+    quality INTEGER,
+    item_class INTEGER,
+    item_subclass INTEGER,
+    inventory_type INTEGER,
+    slot TEXT,                            -- канонический слот EasyRoster
+    base_ilvl INTEGER,
+    item_set_id INTEGER,
+    specs TEXT,                           -- JSON [specId] | NULL
+    allowable_classes TEXT,               -- JSON [classId] | NULL
+    stats TEXT,                           -- JSON [{id, alloc}]
+    contains TEXT,                        -- JSON [itemId] для токенов
+    unique_equipped INTEGER,
+    on_use_trinket INTEGER,
+    expansion INTEGER,
+    origin TEXT NOT NULL DEFAULT 'raidbots'   -- raidbots | blizzard
+  );
+  CREATE INDEX IF NOT EXISTS idx_items_set ON items(item_set_id);
+
+  CREATE TABLE IF NOT EXISTS item_sources (
+    item_id INTEGER NOT NULL,
+    instance_id INTEGER NOT NULL,
+    encounter_id INTEGER NOT NULL,
+    PRIMARY KEY (item_id, instance_id, encounter_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_item_sources_inst ON item_sources(instance_id, encounter_id);
+
+  CREATE TABLE IF NOT EXISTS instances (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,                   -- raid | mplus-chest | expansion-dungeon | ...
+    sort_order INTEGER,
+    encounters TEXT NOT NULL              -- JSON [{id, name}]
+  );
+  `,
 ];
 
 export class Db {

@@ -64,9 +64,14 @@ export interface EquipmentRow {
   setName: string | null;
 }
 
+export interface EquipmentView extends EquipmentRow {
+  track: import("./items.js").TrackInfo | null;
+  icon: string | null;
+}
+
 export interface CharacterDetail {
   character: CharacterRow;
-  equipment: EquipmentRow[];
+  equipment: EquipmentView[];
 }
 
 export interface SyncStatus {
@@ -91,6 +96,55 @@ export const EQUIP_SLOT_NAMES_RU: Record<string, string> = {
   FINGER_1: "Кольцо 1", FINGER_2: "Кольцо 2", TRINKET_1: "Аксессуар 1", TRINKET_2: "Аксессуар 2",
   MAIN_HAND: "Правая рука", OFF_HAND: "Левая рука",
 };
+
+// ------------------------------------------------------------ фаза 2
+
+export interface ItemRow {
+  id: number;
+  name: string;
+  nameRu: string | null;
+  icon: string | null;
+  quality: number | null;
+  itemClass: number | null;
+  itemSubClass: number | null;
+  inventoryType: number | null;
+  slot: string | null;
+  baseIlvl: number | null;
+  itemSetId: number | null;
+  specs: number[] | null;
+  allowableClasses: number[] | null;
+  stats: Array<{ id: number; alloc?: number }>;
+  contains: number[] | null;
+  uniqueEquipped: boolean;
+  onUseTrinket: boolean;
+  expansion: number | null;
+  origin: "raidbots" | "blizzard";
+}
+
+export interface InstanceRow {
+  id: number;
+  name: string;
+  type: string;
+  order: number | null;
+  encounters: Array<{ id: number; name: string }>;
+}
+
+export interface StaticDataStatus {
+  build: string | null;
+  updatedAt: number | null;
+  items: number;
+  instances: number;
+  bonuses: number;
+  refreshing: boolean;
+  lastError: string | null;
+  season: { label: string; seasonId: number | null; raids: InstanceRow[]; dungeons: InstanceRow[] };
+}
+
+/** Лут инстанса, сгруппированный по боссам. */
+export interface LootInstanceView {
+  instance: InstanceRow;
+  encounters: Array<{ id: number; name: string; items: ItemRow[] }>;
+}
 
 export interface ApiError {
   error: string;

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import type { CharacterDetail } from "@easyroster/core";
+import { decodeTrack, type CharacterDetail } from "@easyroster/core";
 import type { AppContext } from "../context.js";
 
 export async function rosterRoutes(app: FastifyInstance, ctx: AppContext): Promise<void> {
@@ -16,7 +16,13 @@ export async function rosterRoutes(app: FastifyInstance, ctx: AppContext): Promi
       reply.code(404);
       return { error: "Персонаж не найден" };
     }
-    const detail: CharacterDetail = { character, equipment: ctx.sync.repo.equipment(id) };
+    const eq = ctx.sync.repo.equipment(id);
+    const items = ctx.staticData.items(eq.map((e) => e.itemId));
+    const bonuses = ctx.staticData.getBonuses();
+    const detail: CharacterDetail = {
+      character,
+      equipment: eq.map((e) => ({ ...e, track: decodeTrack(e.bonusIds, bonuses), icon: items.get(e.itemId)?.icon ?? null })),
+    };
     return detail;
   });
 

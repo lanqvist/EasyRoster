@@ -5,6 +5,7 @@ import type { HealthResponse } from "@easyroster/core";
 import { createContext } from "./context.js";
 import { configRoutes } from "./routes/config.js";
 import { rosterRoutes } from "./routes/roster.js";
+import { lootRoutes } from "./routes/loot.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
 const VERSION = "0.1.0";
@@ -26,7 +27,16 @@ async function main(): Promise<void> {
 
   await configRoutes(app, ctx);
   await rosterRoutes(app, ctx);
+  await lootRoutes(app, ctx);
   ctx.sync.startScheduler();
+
+  // Справочники: при первом запуске / устаревании подтягиваем в фоне
+  if (ctx.staticData.status().items === 0) {
+    void ctx.staticData
+      .refresh()
+      .then(() => ctx.items.localizeSeasonItems())
+      .catch((e) => app.log.warn(`Raidbots static: ${(e as Error).message}`));
+  }
 
   // Собранный фронтенд (если есть) — SPA fallback на index.html.
   if (fs.existsSync(WEB_DIST)) {

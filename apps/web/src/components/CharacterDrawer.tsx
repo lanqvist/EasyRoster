@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, type CharacterDetail } from "@easyroster/core";
+import { EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type CharacterDetail } from "@easyroster/core";
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, QUALITY_COLORS, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
@@ -119,6 +119,7 @@ export function CharacterDrawer({ id, onClose }: { id: number; onClose: () => vo
                       <tr key={slot}>
                         <td className="muted">{EQUIP_SLOT_NAMES_RU[slot]}</td>
                         <td>
+                          {it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ verticalAlign: "middle", marginRight: 6, borderRadius: 3 }} />}
                           {it ? (
                             <a
                               href={`https://www.wowhead.com/ru/item=${it.itemId}${it.bonusIds.length ? `?bonus=${it.bonusIds.join(":")}` : ""}`}
@@ -134,7 +135,9 @@ export function CharacterDrawer({ id, onClose }: { id: number; onClose: () => vo
                           )}
                         </td>
                         <td className="num">{it?.ilvl ?? ""}</td>
-                        <td className="muted">{it?.trackName ?? ""}</td>
+                        <td className="muted" title={it?.track ? `${it.track.name} ${it.track.level}/${it.track.max}` : undefined}>
+                          {it?.track ? `${TRACK_NAMES_RU[it.track.name] ?? it.track.name} ${it.track.level}/${it.track.max}` : it?.trackName ?? ""}
+                        </td>
                         <td className="muted" style={{ fontSize: 12 }}>
                           {it && (
                             <>

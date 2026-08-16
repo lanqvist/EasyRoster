@@ -18,6 +18,8 @@ export class SyncService {
   private timer: NodeJS.Timeout | null = null;
   private nextAutoSyncAt: number | null = null;
   readonly repo: CharactersRepo;
+  /** Хук после синка персонажей (например, дозагрузка предметов экипировки в справочник). */
+  afterCharacterSync: (() => Promise<void>) | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -146,6 +148,7 @@ export class SyncService {
       this.logFinish(logId, counters.errors === 0, msg);
       this.lastCharSync = { at: Date.now(), ok: counters.errors === 0, message: msg };
       this.log.info(msg);
+      if (this.afterCharacterSync) await this.afterCharacterSync().catch((e) => this.log.warn(`afterCharacterSync: ${(e as Error).message}`));
       return counters;
     } catch (e) {
       const msg = (e as Error).message;

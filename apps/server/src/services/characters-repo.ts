@@ -82,6 +82,10 @@ export class CharactersRepo {
     return r ? mapCharacter(r) : undefined;
   }
 
+  allEquippedItemIds(): number[] {
+    return (this.db.conn.prepare("SELECT DISTINCT item_id FROM equipment").all() as Array<{ item_id: number }>).map((r) => r.item_id);
+  }
+
   equipment(id: number): EquipmentRow[] {
     return this.db.conn.prepare("SELECT * FROM equipment WHERE character_id = ?").all(id).map(mapEquipment);
   }
