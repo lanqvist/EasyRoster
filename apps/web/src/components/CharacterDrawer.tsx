@@ -137,6 +137,7 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
                       источники: {bis.sourcesUsed.map((s) => `${SOURCE_LABEL[s.source]} (${s.count})`).join(", ") || "нет — обновите на странице BiS"}
                       {bis.personalSim && <> · сим: {bis.personalSim.label}</>}
                     </div>
+                    <DroptimizerBox characterId={id} onImported={loadBis} />
                     <BisSlotList view={bis} locale={config?.locale ?? "ru_RU"} onPin={(e) => manual(e, "pin")} onExclude={(e) => manual(e, "exclude")} />
                     <ManualRules specId={bis.specId} characterId={id} onChange={loadBis} />
                   </>
@@ -236,6 +237,51 @@ function ManualRules({ specId, characterId, onChange }: { specId: number; charac
           <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DroptimizerBox({ characterId, onImported }: { characterId: number; onImported: () => void }) {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [sim, setSim] = useState<Awaited<ReturnType<typeof api.bisSim>>>(null);
+  useEffect(() => {
+    api.bisSim(characterId).then(setSim).catch(() => undefined);
+  }, [characterId]);
+  const submit = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api.bisDroptimizer(characterId, url);
+      setMsg({ ok: true, text: `Импортировано: ${r.results} результатов, ${r.candidates} апгрейдов${r.warning ? ` · ⚠ ${r.warning}` : ""}` });
+      setUrl("");
+      setSim(await api.bisSim(characterId));
+      onImported();
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div style={{ marginBottom: 12, padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 6 }}>
+      <div className="row" style={{ gap: 6 }}>
+        <input placeholder="Ссылка на Raidbots Droptimizer (…/simbot/report/ID)" value={url} onChange={(e) => setUrl(e.target.value)} style={{ flex: 1, minWidth: 220 }} />
+        <button disabled={busy || !url} onClick={submit}>{busy ? "Импорт…" : "Импорт"}</button>
+      </div>
+      <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+        {sim ? (
+          <>
+            Последний сим: {fmtDate(sim.importedAt)}{sim.simDate ? ` (сим от ${fmtDate(sim.simDate)})` : ""}
+            {sim.url && <> · <a href={sim.url} target="_blank" rel="noreferrer">отчёт</a></>}
+            {sim.baselineDps ? ` · база ${Math.round(sim.baselineDps).toLocaleString("ru-RU")}` : ""}
+          </>
+        ) : (
+          "Персональный сим поднимает предметы по % апгрейда; без него — общий лист спеки."
+        )}
+      </div>
+      {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`} style={{ marginBottom: 0 }}>{msg.text}</div>}
     </div>
   );
 }

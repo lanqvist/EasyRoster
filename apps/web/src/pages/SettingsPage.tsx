@@ -12,6 +12,8 @@ export function SettingsPage() {
   const [labels, setLabels] = useState<Record<string, string>>(config?.rankLabels ?? {});
   const [wowPath, setWowPath] = useState(config?.wowRetailPath ?? "");
   const [interval, setInterval_] = useState(config?.sync.intervalMinutes ?? 30);
+  const [guidesDays, setGuidesDays] = useState(config?.sync.guidesRefreshDays ?? 7);
+  const [autoExport, setAutoExport] = useState(config?.sync.autoExportLua ?? true);
   const [bnetId, setBnetId] = useState(config?.blizzard.clientId ?? "");
   const [bnetSecret, setBnetSecret] = useState("");
   const [wclId, setWclId] = useState(config?.warcraftLogs.clientId ?? "");
@@ -27,7 +29,7 @@ export function SettingsPage() {
         raiderRanks: ranks,
         rankLabels: labels,
         wowRetailPath: wowPath,
-        sync: { intervalMinutes: interval },
+        sync: { intervalMinutes: interval, guidesRefreshDays: guidesDays, autoExportLua: autoExport },
         blizzard: { clientId: bnetId, clientSecret: bnetSecret },
         warcraftLogs: { clientId: wclId, clientSecret: wclSecret },
       });
@@ -112,6 +114,16 @@ export function SettingsPage() {
           <div className="field">
             <label>Автосинк, минут (0 — выкл.)</label>
             <input type="number" min={0} max={1440} value={interval} onChange={(e) => setInterval_(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label>Автообновление Icy Veins, дней (0 — выкл.)</label>
+            <input type="number" min={0} max={60} value={guidesDays} onChange={(e) => setGuidesDays(Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label>db.lua для аддона</label>
+            <label className="row" style={{ gap: 6, textTransform: "none", letterSpacing: 0, fontSize: 13, color: "var(--text)" }}>
+              <input type="checkbox" checked={autoExport} onChange={(e) => setAutoExport(e.target.checked)} /> перезаписывать автоматически после синка
+            </label>
           </div>
         </div>
       </div>

@@ -74,6 +74,10 @@ export const api = {
     if (q.sinceTs) p.set("sinceTs", String(q.sinceTs));
     return request<LootHistoryRow[]>(`/api/wow/history?${p}`);
   },
+  bisDroptimizer: (characterId: number, url: string) =>
+    request<{ reportId: string; results: number; candidates: number; warning: string | null }>("/api/bis/droptimizer", { method: "POST", body: JSON.stringify({ characterId, url }) }),
+  bisSim: (characterId: number) =>
+    request<{ id: number; kind: string; url: string | null; simDate: number | null; importedAt: number; baselineDps: number | null; fightStyle: string | null } | null>(`/api/bis/sim/${characterId}`),
   probeGuild: (body: { region: string; clientId: string; clientSecret?: string; realmSlug: string; guildName: string }) =>
     request<GuildProbeResult>("/api/blizzard/probe-guild", { method: "POST", body: JSON.stringify(body) }),
 };

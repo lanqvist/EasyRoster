@@ -18,6 +18,7 @@ import { BisRepo } from "./repo.js";
 import { buildCharacterBis } from "./engine.js";
 import { fetchIcyVeins } from "./icyveins.js";
 import { WclClient, aggregateGear, wclClassName, wclSpecName } from "./wcl.js";
+import { droptimizerCandidates, extractReportId, fetchDroptimizerReport, parseDroptimizerJson } from "./droptimizer.js";
 import type { Logger } from "../../context.js";
 
 export interface BisProgress {
@@ -194,6 +195,28 @@ export class BisService {
       this.running.wcl = false;
       this.progress = null;
     }
+  }
+
+  // ------------------------------------------------------------ Droptimizer
+
+  async importDroptimizer(character: CharacterRow, url: string): Promise<{ reportId: string; results: number; candidates: number; warning: string | null }> {
+    const reportId = extractReportId(url);
+    if (!reportId) throw new Error("Не удалось распознать ссылку Raidbots (ожидается …/simbot/report/ID)");
+    const json = await fetchDroptimizerReport(reportId);
+    const report = parseDroptimizerJson(reportId, json, (id) => !!this.staticData.item(id));
+    if (report.results.length === 0) throw new Error("В отчёте нет результатов Droptimizer (это Droptimizer, а не Top Gear/Quick Sim?)");
+    let warning: string | null = null;
+    if (report.character.name && report.character.name.toLowerCase() !== character.name.toLowerCase()) {
+      warning = `Отчёт для персонажа «${report.character.name}», а импортируется в «${character.name}»`;
+    }
+    const cands = droptimizerCandidates(report, (id) => this.staticData.item(id)?.slot ?? null);
+    const specId = character.activeSpecId ?? 0;
+    this.repo.replaceCandidates("droptimizer", specId, character.id, cands, Date.now());
+    this.repo.addSimReport({
+      characterId: character.id, specId, kind: "droptimizer", reportId, url, simDate: report.date, baselineDps: report.baselineDps,
+      fightStyle: report.fightStyle, meta: { character: report.character, simType: report.simType, results: report.results.length },
+    });
+    return { reportId, results: report.results.length, candidates: cands.length, warning };
   }
 
   // ------------------------------------------------------------ вычисление

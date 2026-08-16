@@ -31,6 +31,39 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   const items = new ItemsService(config, staticData, log);
   sync.afterCharacterSync = async () => {
     await items.ensureItems(sync.repo.allEquippedItemIds());
+    // авто-экспорт db.lua после обновления экипировки
+    if (config.get().sync.autoExportLua && config.get().wowRetailPath) {
+      try {
+        wow.exportDbLua();
+      } catch (e) {
+        log.warn(`auto db.lua: ${(e as Error).message}`);
+      }
+    }
+  };
+  sync.periodicTasks = async () => {
+    const cfg = config.get();
+    // еженедельное обновление Icy Veins для спек ростера
+    if (cfg.sync.guidesRefreshDays > 0) {
+      const specs = bis.rosterSpecIds();
+      const stale = specs.filter((s) => {
+        const at = bis.repo.fetchedAt("icyveins", s);
+        return !at || Date.now() - at > cfg.sync.guidesRefreshDays * 86400000;
+      });
+      if (stale.length) await bis.refreshIcyVeins(stale).catch((e) => log.warn(`auto icyveins: ${(e as Error).message}`));
+    }
+    // подтянуть новую историю лута RCLC, если файл обновился
+    if (cfg.wowRetailPath) {
+      try {
+        const st = wow.status();
+        const newest = Math.max(0, ...st.rclcSavedVariables.map((f) => f.mtime));
+        if (newest > (st.lastHistoryImportAt ?? 0)) {
+          wow.importLootHistory();
+          bis.invalidateHistoryCache();
+        }
+      } catch (e) {
+        log.warn(`auto history: ${(e as Error).message}`);
+      }
+    }
   };
   const bis = new BisService(db, config, staticData, sync.repo, log);
   const wow = new WowIntegrationService(config, db, sync.repo, bis, staticData, log);

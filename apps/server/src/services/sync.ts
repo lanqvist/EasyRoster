@@ -20,6 +20,8 @@ export class SyncService {
   readonly repo: CharactersRepo;
   /** Хук после синка персонажей (например, дозагрузка предметов экипировки в справочник). */
   afterCharacterSync: (() => Promise<void>) | null = null;
+  /** Периодические задачи (вызываются планировщиком после автосинка). */
+  periodicTasks: (() => Promise<void>) | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -240,6 +242,7 @@ export class SyncService {
       if (!cfg.setupComplete || !cfg.blizzard.clientSecret) return;
       this.syncGuild()
         .then(() => this.syncCharacters())
+        .then(() => this.periodicTasks?.())
         .catch((e) => this.log.warn(`автосинк: ${(e as Error).message}`));
     }, ms);
     this.timer.unref();

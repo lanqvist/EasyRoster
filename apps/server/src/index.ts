@@ -61,6 +61,12 @@ async function main(): Promise<void> {
   const port = ctx.config.get().server.port;
   await app.listen({ port, host: "127.0.0.1" });
   app.log.info(`EasyRoster ${VERSION} → http://localhost:${port}`);
+  if (process.argv.includes("--open") || process.env.EASYROSTER_OPEN === "1") {
+    const { exec } = await import("node:child_process");
+    const url = `http://localhost:${port}`;
+    const cmd = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+    exec(cmd, () => undefined);
+  }
 
   const shutdown = () => {
     app.close().finally(() => {

@@ -92,6 +92,10 @@ export const AppConfigSchema = z.object({
     .object({
       /** интервал автосинка персонажей, минуты; 0 = выключено */
       intervalMinutes: z.number().int().min(0).max(1440).default(30),
+      /** автообновление BiS-листов Icy Veins, дни; 0 = выключено */
+      guidesRefreshDays: z.number().int().min(0).max(60).default(7),
+      /** автоматически перезаписывать db.lua аддона после синка/пересчёта (если путь к WoW задан) */
+      autoExportLua: z.boolean().default(true),
     })
     .default({}),
 

@@ -45,6 +45,27 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
 
   app.get("/api/bis/team", async () => ctx.bis.team());
 
+  /** Импорт отчёта Raidbots Droptimizer по ссылке. */
+  app.post("/api/bis/droptimizer", async (req, reply) => {
+    const body = z.object({ characterId: z.number().int(), url: z.string().min(5) }).parse(req.body);
+    const c = ctx.sync.repo.get(body.characterId);
+    if (!c) {
+      reply.code(404);
+      return { error: "Персонаж не найден" };
+    }
+    try {
+      return await ctx.bis.importDroptimizer(c, body.url);
+    } catch (e) {
+      reply.code(400);
+      return { error: (e as Error).message };
+    }
+  });
+
+  app.get("/api/bis/sim/:characterId", async (req) => {
+    const { characterId } = z.object({ characterId: z.coerce.number().int() }).parse(req.params);
+    return ctx.bis.repo.latestSim(characterId);
+  });
+
   app.get("/api/bis/item/:itemId", async (req) => {
     const { itemId } = z.object({ itemId: z.coerce.number().int() }).parse(req.params);
     return ctx.bis.wanters(itemId);
