@@ -16,6 +16,12 @@
 
 ## Быстрый старт
 
+### Портативная версия (Windows, без установки Node)
+
+Скачайте `EasyRoster-portable-win64-vX.Y.Z.zip` из [Releases](https://github.com/lanqvist/EasyRoster/releases), распакуйте в любую папку и запустите `EasyRoster.cmd` — откроется браузер с http://localhost:4777. Все данные (ключи, база, кэши) хранятся в папке `data` рядом — переносится копированием.
+
+### Из исходников
+
 Требуется Node.js ≥ 22.13 (используется встроенный `node:sqlite`).
 
 ```bash
@@ -47,7 +53,7 @@ npm run dev:server
 ```bash
 npm run dev:web
 ```
-Vite на 5173 проксирует `/api` на 4777. Тесты: `npm test` (парсеры Icy Veins/Lua/Droptimizer, движок BiS, интеграционный синк с mock Blizzard API).
+Vite на 5173 проксирует `/api` на 4777. Портативная сборка: `npm run build:portable` (или автоматически в GitHub Actions по тегу `v*`). Тесты: `npm test` (парсеры Icy Veins/Lua/Droptimizer, движок BiS, интеграционный синк с mock Blizzard API).
 
 ## Структура
 
@@ -56,7 +62,7 @@ apps/server     Fastify + node:sqlite — API, синк, источники BiS,
 apps/web        React + Vite — веб-интерфейс (TypeScript)
 packages/core   общие типы, схема конфига (zod), справочники WoW/предметов/треков
 addon/RCLootCouncil_EasyRoster   плагин RCLootCouncil (Lua)
-reference/      исходники RCLootCouncil и референсных плагинов (только для чтения)
+reference/      (не в git) клоны RCLootCouncil2 / RCLootCouncil_wowaudit / ExtraUtilities для сверки API
 docs/PLAN.md    исследование и план
 data/           config.json, easyroster.sqlite, кэши (не в git)
 ```

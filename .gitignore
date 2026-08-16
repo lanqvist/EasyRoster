@@ -7,3 +7,7 @@ data/
 *.log
 .DS_Store
 Thumbs.db
+
+# референсные исходники сторонних аддонов (без лицензии на редистрибуцию)
+reference/
+dist-portable/
