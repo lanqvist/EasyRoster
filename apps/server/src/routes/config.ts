@@ -52,7 +52,7 @@ export async function configRoutes(app: FastifyInstance, ctx: AppContext): Promi
     try {
       const realms = await client.realmIndex();
       const out: RealmOption[] = realms
-        .map((r) => ({ id: r.id, name: r.name, slug: r.slug }))
+        .map((r) => ({ id: r.id, name: (typeof r.name === "string" && r.name) || r.slug, slug: r.slug }))
         .sort((a, b) => a.name.localeCompare(b.name, "ru"));
       return out;
     } catch (e) {

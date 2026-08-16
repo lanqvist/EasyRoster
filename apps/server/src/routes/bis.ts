@@ -23,6 +23,11 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
       reply.code(409);
       return { error: "Уже идёт" };
     }
+    const cfg = ctx.config.get();
+    if (!cfg.warcraftLogs.clientId || !cfg.warcraftLogs.clientSecret) {
+      reply.code(400);
+      return { error: "Не заданы ключи Warcraft Logs — Настройки → Ключи API (warcraftlogs.com/api/clients)" };
+    }
     void ctx.bis.refreshWcl(body.all ? undefined : body.specIds).catch(() => undefined);
     return { started: true };
   });

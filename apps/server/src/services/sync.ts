@@ -190,7 +190,7 @@ export class SyncService {
     const summary = summaryRes.data!;
 
     const [equipment, specs, media] = await Promise.all([
-      client.characterEquipment(realmSlug, name),
+      client.characterEquipment(realmSlug, name).catch(() => null),
       client.characterSpecializations(realmSlug, name).catch(() => null),
       client.characterMedia(realmSlug, name).catch(() => null),
     ]);
@@ -219,7 +219,7 @@ export class SyncService {
         summaryLastModified: summaryRes.lastModified ?? null,
         syncedAt: Date.now(),
       },
-      equipment.equipped_items.map(mapEquipped),
+      (equipment?.equipped_items ?? []).map(mapEquipped),
     );
     return "ok";
   }
