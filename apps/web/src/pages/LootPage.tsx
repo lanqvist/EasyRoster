@@ -11,9 +11,11 @@ import {
   type ItemRow,
   type LootInstanceView,
   type StaticDataStatus,
+  type ItemWanter,
 } from "@easyroster/core";
 import { api } from "../lib/api";
-import { className, QUALITY_COLORS_NUM } from "../lib/format";
+import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
+import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { useConfig } from "../lib/config-context";
 
 export function LootPage() {
@@ -27,6 +29,7 @@ export function LootPage() {
   const [filterSpec, setFilterSpec] = useState<number | "">("");
   const [filterSlot, setFilterSlot] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
 
   const load = async () => {
     try {
@@ -47,7 +50,18 @@ export function LootPage() {
 
   useEffect(() => {
     if (selected === null) return;
-    api.lootInstance(selected).then(setView).catch((e) => setErr((e as Error).message));
+    api
+      .lootInstance(selected)
+      .then(async (v) => {
+        setView(v);
+        const ids = v.encounters.flatMap((e) => e.items.map((i) => i.id));
+        try {
+          setWanters(await api.bisWanters(ids));
+        } catch {
+          setWanters({});
+        }
+      })
+      .catch((e) => setErr((e as Error).message));
   }, [selected]);
 
   const refresh = async (force: boolean) => {
@@ -171,7 +185,7 @@ export function LootPage() {
                   <table>
                     <tbody>
                       {items.map((it) => (
-                        <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} />
+                        <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} wanters={wanters[it.id] ?? []} />
                       ))}
                     </tbody>
                   </table>
@@ -185,7 +199,7 @@ export function LootPage() {
   );
 }
 
-function ItemLine({ item, locale }: { item: ItemRow; locale: string }) {
+function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wanters: ItemWanter[] }) {
   const name = locale.startsWith("ru") ? item.nameRu ?? item.name : item.name;
   const type =
     item.itemClass === 4
@@ -211,6 +225,20 @@ function ItemLine({ item, locale }: { item: ItemRow; locale: string }) {
       <td className="muted">{type}</td>
       <td className="muted" style={{ fontSize: 12 }}>
         {classes ?? (item.specs ? `${item.specs.length} спек` : "")}
+      </td>
+      <td style={{ fontSize: 12 }}>
+        {wanters.slice(0, 6).map((w) => (
+          <span
+            key={w.characterId + w.slot}
+            title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · +${w.upgradePct}%` : ""}`}
+            style={{ marginRight: 8, whiteSpace: "nowrap" }}
+          >
+            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color, marginRight: 3 }} />
+            <span style={{ color: classColor(w.classId) }}>{w.name}</span>
+            <span className="muted">{w.rank > 1 ? ` #${w.rank}` : ""}</span>
+          </span>
+        ))}
+        {wanters.length > 6 && <span className="muted">+{wanters.length - 6}</span>}
       </td>
     </tr>
   );

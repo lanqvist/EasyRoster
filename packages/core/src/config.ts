@@ -68,6 +68,26 @@ export const AppConfigSchema = z.object({
     })
     .default({}),
 
+  /** Настройки движка BiS. */
+  bis: z
+    .object({
+      /** WCL: страниц рейтинга на босса (100 парсов на страницу) */
+      wclPagesPerEncounter: z.number().int().min(1).max(5).default(1),
+      /** WCL: сложность 5 = mythic, 4 = heroic */
+      wclDifficulty: z.number().int().min(3).max(5).default(5),
+      /** WCL: минимальная доля (%) предмета, чтобы попасть в кандидаты */
+      wclMinSharePct: z.number().min(0).max(100).default(5),
+      /** сколько кандидатов показывать на слот */
+      perSlot: z.number().int().min(1).max(10).default(4),
+      /** веса источников при объединении */
+      weights: z
+        .object({ icyveins: z.number().default(1), wcl: z.number().default(1), droptimizer: z.number().default(2) })
+        .default({}),
+      /** дней, после которых персональный сим считается устаревшим */
+      simMaxAgeDays: z.number().int().min(1).max(90).default(14),
+    })
+    .default({}),
+
   sync: z
     .object({
       /** интервал автосинка персонажей, минуты; 0 = выключено */

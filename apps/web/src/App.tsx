@@ -3,6 +3,7 @@ import { ConfigProvider, useConfig } from "./lib/config-context";
 import { SetupPage } from "./pages/SetupPage";
 import { RosterPage } from "./pages/RosterPage";
 import { LootPage } from "./pages/LootPage";
+import { BisPage } from "./pages/BisPage";
 import { RaidNightPage } from "./pages/RaidNightPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
@@ -34,6 +35,7 @@ function Shell() {
         </div>
         <nav className="nav">
           <NavLink to="/roster">Ростер</NavLink>
+          <NavLink to="/bis">BiS</NavLink>
           <NavLink to="/loot">Лут</NavLink>
           <NavLink to="/raid-night">Лут-ночь</NavLink>
           <NavLink to="/settings">Настройки</NavLink>
@@ -46,6 +48,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Navigate to="/roster" replace />} />
           <Route path="/roster" element={<RosterPage />} />
+          <Route path="/bis" element={<BisPage />} />
           <Route path="/loot" element={<LootPage />} />
           <Route path="/raid-night" element={<RaidNightPage />} />
           <Route path="/settings" element={<SettingsPage />} />

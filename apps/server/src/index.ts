@@ -6,6 +6,7 @@ import { createContext } from "./context.js";
 import { configRoutes } from "./routes/config.js";
 import { rosterRoutes } from "./routes/roster.js";
 import { lootRoutes } from "./routes/loot.js";
+import { bisRoutes } from "./routes/bis.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
 const VERSION = "0.1.0";
@@ -28,6 +29,7 @@ async function main(): Promise<void> {
   await configRoutes(app, ctx);
   await rosterRoutes(app, ctx);
   await lootRoutes(app, ctx);
+  await bisRoutes(app, ctx);
   ctx.sync.startScheduler();
 
   // Справочники: при первом запуске / устаревании подтягиваем в фоне

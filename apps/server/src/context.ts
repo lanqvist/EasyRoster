@@ -3,6 +3,7 @@ import { Db } from "./services/db.js";
 import { SyncService } from "./services/sync.js";
 import { StaticDataService } from "./services/static-data.js";
 import { ItemsService } from "./services/items.js";
+import { BisService } from "./services/bis/service.js";
 
 export interface Logger {
   info: (m: string) => void;
@@ -16,6 +17,7 @@ export interface AppContext {
   sync: SyncService;
   staticData: StaticDataService;
   items: ItemsService;
+  bis: BisService;
   log: Logger;
 }
 
@@ -28,5 +30,6 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   sync.afterCharacterSync = async () => {
     await items.ensureItems(sync.repo.allEquippedItemIds());
   };
-  return { config, db, sync, staticData, items, log };
+  const bis = new BisService(db, config, staticData, sync.repo, log);
+  return { config, db, sync, staticData, items, bis, log };
 }

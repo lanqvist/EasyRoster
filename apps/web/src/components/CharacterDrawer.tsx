@@ -1,12 +1,36 @@
 import { useEffect, useState } from "react";
-import { EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type CharacterDetail } from "@easyroster/core";
+import { EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type BisCharacterView, type BisEntry, type CharacterDetail } from "@easyroster/core";
+import { BisSlotList, SOURCE_LABEL } from "./BisSlotList";
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, QUALITY_COLORS, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
 
-export function CharacterDrawer({ id, onClose }: { id: number; onClose: () => void }) {
+export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: number; onClose: () => void; initialTab?: "gear" | "bis" }) {
   const { config } = useConfig();
   const [data, setData] = useState<CharacterDetail | null>(null);
+  const [tab, setTab] = useState<"gear" | "bis">(initialTab);
+  const [bis, setBis] = useState<BisCharacterView | null>(null);
+  const [bisErr, setBisErr] = useState<string | null>(null);
+
+  const loadBis = () =>
+    api
+      .bisCharacter(id)
+      .then((v) => {
+        setBis(v);
+        setBisErr(null);
+      })
+      .catch((e) => setBisErr((e as Error).message));
+
+  useEffect(() => {
+    if (tab === "bis") void loadBis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, id]);
+
+  const manual = async (e: BisEntry, action: "pin" | "exclude") => {
+    if (!bis) return;
+    await api.bisManualAdd({ characterId: id, specId: bis.specId, slot: e.slot, itemId: e.itemId, action });
+    await loadBis();
+  };
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -98,10 +122,30 @@ export function CharacterDrawer({ id, onClose }: { id: number; onClose: () => vo
               </button>
             </div>
 
-            <h3 style={{ fontSize: 14, marginBottom: 6 }}>Экипировка</h3>
-            {data!.equipment.length === 0 ? (
+            <div className="row" style={{ marginBottom: 10, gap: 6 }}>
+              <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>
+              <button className={tab === "bis" ? "primary" : undefined} onClick={() => setTab("bis")}>BiS-лист</button>
+            </div>
+            {tab === "bis" && (
+              <div>
+                {bisErr && <div className="alert bad">{bisErr}</div>}
+                {!bis && !bisErr && <div className="muted">Считаю…</div>}
+                {bis && (
+                  <>
+                    <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+                      Покрытие: <b>{bis.coverage.pct}%</b> ({bis.coverage.obtained} из {bis.coverage.slots} на макс. треке, {bis.coverage.lower} ниже трека/катализатор) ·
+                      источники: {bis.sourcesUsed.map((s) => `${SOURCE_LABEL[s.source]} (${s.count})`).join(", ") || "нет — обновите на странице BiS"}
+                      {bis.personalSim && <> · сим: {bis.personalSim.label}</>}
+                    </div>
+                    <BisSlotList view={bis} locale={config?.locale ?? "ru_RU"} onPin={(e) => manual(e, "pin")} onExclude={(e) => manual(e, "exclude")} />
+                    <ManualRules specId={bis.specId} characterId={id} onChange={loadBis} />
+                  </>
+                )}
+              </div>
+            )}
+            {tab === "gear" && data!.equipment.length === 0 ? (
               <div className="muted">Нет данных об экипировке.</div>
-            ) : (
+            ) : tab === "gear" ? (
               <table>
                 <thead>
                   <tr>
@@ -152,8 +196,8 @@ export function CharacterDrawer({ id, onClose }: { id: number; onClose: () => vo
                   })}
                 </tbody>
               </table>
-            )}
-            {c.talentLoadoutCode && (
+            ) : null}
+            {tab === "gear" && c.talentLoadoutCode && (
               <div style={{ marginTop: 14 }}>
                 <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Код талантов (активный лоадаут)</div>
                 <code style={{ wordBreak: "break-all", fontSize: 11 }}>{c.talentLoadoutCode}</code>
@@ -171,6 +215,27 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div>
       <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em" }}>{label}</div>
       <div>{value}</div>
+    </div>
+  );
+}
+
+function ManualRules({ specId, characterId, onChange }: { specId: number; characterId: number; onChange: () => void }) {
+  const [rules, setRules] = useState<Array<{ id: number; characterId: number | null; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null }>>([]);
+  const load = () => api.bisManualList(specId, characterId).then(setRules).catch(() => undefined);
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specId, characterId]);
+  if (rules.length === 0) return null;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Ручные правки</div>
+      {rules.map((r) => (
+        <div key={r.id} className="row" style={{ fontSize: 12, gap: 8 }}>
+          <span>{r.action === "pin" ? "📌" : "✕"} {EQUIP_SLOT_NAMES_RU[r.slot] ?? r.slot} · #{r.itemId}{r.characterId === null ? " (вся спека)" : ""}</span>
+          <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
+        </div>
+      ))}
     </div>
   );
 }

@@ -2,6 +2,10 @@ import type {
   CharacterDetail,
   CharacterRow,
   ConfigPatch,
+  BisCharacterView,
+  BisSourceStatus,
+  BisTeamRow,
+  ItemWanter,
   InstanceRow,
   LootInstanceView,
   StaticDataStatus,
@@ -41,6 +45,20 @@ export const api = {
   staticRefresh: (force = false) => request<unknown>("/api/static/refresh", { method: "POST", body: JSON.stringify({ force }) }),
   lootInstances: () => request<{ season: StaticDataStatus["season"]; all: InstanceRow[] }>("/api/loot/instances"),
   lootInstance: (id: number) => request<LootInstanceView>(`/api/loot/instances/${id}`),
+  bisStatus: () => request<{ sources: BisSourceStatus[]; progress: { source: string; done: number; total: number; current: string } | null }>("/api/bis/status"),
+  bisRefresh: (source: "icyveins" | "wcl", body: { specIds?: number[]; all?: boolean } = {}) =>
+    request<{ started: true }>(`/api/bis/sources/${source}/refresh`, { method: "POST", body: JSON.stringify(body) }),
+  bisCharacter: (id: number, spec?: number) => request<BisCharacterView>(`/api/bis/character/${id}${spec ? `?spec=${spec}` : ""}`),
+  bisTeam: () => request<BisTeamRow[]>("/api/bis/team"),
+  bisItem: (itemId: number) => request<ItemWanter[]>(`/api/bis/item/${itemId}`),
+  bisWanters: (itemIds: number[]) => request<Record<number, ItemWanter[]>>("/api/bis/wanters", { method: "POST", body: JSON.stringify({ itemIds }) }),
+  bisManualAdd: (body: { characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note?: string | null }) =>
+    request<{ id: number }>("/api/bis/manual", { method: "POST", body: JSON.stringify(body) }),
+  bisManualDelete: (id: number) => request<{ ok: true }>(`/api/bis/manual/${id}`, { method: "DELETE" }),
+  bisManualList: (specId: number, characterId?: number) =>
+    request<Array<{ id: number; characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null }>>(
+      `/api/bis/manual?specId=${specId}${characterId ? `&characterId=${characterId}` : ""}`,
+    ),
   probeGuild: (body: { region: string; clientId: string; clientSecret?: string; realmSlug: string; guildName: string }) =>
     request<GuildProbeResult>("/api/blizzard/probe-guild", { method: "POST", body: JSON.stringify(body) }),
 };

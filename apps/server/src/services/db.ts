@@ -109,6 +109,65 @@ const MIGRATIONS: string[] = [
     encounters TEXT NOT NULL              -- JSON [{id, name}]
   );
   `,
+  // v4 — фаза 3: движок BiS
+  `
+  CREATE TABLE IF NOT EXISTS bis_candidates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,                 -- icyveins | wcl | droptimizer | manual
+    spec_id INTEGER NOT NULL,
+    character_id INTEGER,                 -- NULL = общий для спеки
+    list TEXT NOT NULL,                   -- overall | raid | mplus | tier | trinkets | sim | manual
+    slot TEXT NOT NULL,
+    rank INTEGER NOT NULL,
+    item_id INTEGER NOT NULL,
+    bonus_ids TEXT NOT NULL DEFAULT '[]',
+    original_item_id INTEGER,
+    item_name TEXT,
+    source_note TEXT,
+    score REAL,
+    fetched_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_bis_cand_spec ON bis_candidates(spec_id, source, character_id);
+  CREATE INDEX IF NOT EXISTS idx_bis_cand_item ON bis_candidates(item_id);
+
+  CREATE TABLE IF NOT EXISTS bis_source_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    spec_id INTEGER,                      -- NULL = все спеки
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER,
+    ok INTEGER,
+    message TEXT
+  );
+
+  -- ручные правки: закрепить/убрать предмет для персонажа или спеки
+  CREATE TABLE IF NOT EXISTS bis_manual (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER,                 -- NULL = для всей спеки
+    spec_id INTEGER NOT NULL,
+    slot TEXT NOT NULL,
+    item_id INTEGER NOT NULL,
+    action TEXT NOT NULL,                 -- pin | exclude
+    note TEXT,
+    created_at INTEGER NOT NULL
+  );
+
+  -- персональные симы (Raidbots Droptimizer и т.п.)
+  CREATE TABLE IF NOT EXISTS sim_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL,
+    spec_id INTEGER,
+    kind TEXT NOT NULL,                   -- droptimizer | topgear | simc
+    report_id TEXT,
+    url TEXT,
+    sim_date INTEGER,
+    imported_at INTEGER NOT NULL,
+    baseline_dps REAL,
+    fight_style TEXT,
+    meta TEXT                             -- JSON
+  );
+  CREATE INDEX IF NOT EXISTS idx_sim_reports_char ON sim_reports(character_id, imported_at);
+  `,
 ];
 
 export class Db {
