@@ -114,3 +114,15 @@ export const SPEC_BY_ID: ReadonlyMap<number, SpecInfo> = new Map(SPECS.map((s) =
 export function rclcKey(name: string, realmName: string): string {
   return `${name}-${realmName.replace(/\s+/g, "")}`;
 }
+
+/**
+ * Ключ персонажа как его строит RCLootCouncil (Utils:UnitName):
+ * name:lower():gsub("^%l", string.upper) — латиница: первая буква заглавная; кириллица: %l не совпадает → всё в нижнем регистре;
+ * реалм — без пробелов, регистр сохраняется.
+ */
+export function rclcKeyForExport(name: string, realmName: string): string {
+  const lower = name.toLowerCase();
+  const first = lower.charAt(0);
+  const fixed = /^[a-z]$/.test(first) ? first.toUpperCase() + lower.slice(1) : lower;
+  return rclcKey(fixed, realmName);
+}

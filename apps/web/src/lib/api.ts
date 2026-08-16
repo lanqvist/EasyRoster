@@ -2,6 +2,8 @@ import type {
   CharacterDetail,
   CharacterRow,
   ConfigPatch,
+  AddonStatus,
+  LootHistoryRow,
   BisCharacterView,
   BisSourceStatus,
   BisTeamRow,
@@ -59,6 +61,19 @@ export const api = {
     request<Array<{ id: number; characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null }>>(
       `/api/bis/manual?specId=${specId}${characterId ? `&characterId=${characterId}` : ""}`,
     ),
+  wowStatus: () => request<AddonStatus>("/api/wow/status"),
+  wowInstallAddon: () => request<{ dir: string; files: number }>("/api/wow/addon/install", { method: "POST" }),
+  wowExport: () => request<{ path: string; characters: number; bytes: number }>("/api/wow/export", { method: "POST" }),
+  wowImportHistory: () => request<{ files: number; entries: number; added: number }>("/api/wow/import/history", { method: "POST" }),
+  wowImportGuild: () => request<{ ranks: number; members: number; matched: number }>("/api/wow/import/guild", { method: "POST" }),
+  wowHistory: (q: { player?: string; itemId?: number; limit?: number; sinceTs?: number } = {}) => {
+    const p = new URLSearchParams();
+    if (q.player) p.set("player", q.player);
+    if (q.itemId) p.set("itemId", String(q.itemId));
+    if (q.limit) p.set("limit", String(q.limit));
+    if (q.sinceTs) p.set("sinceTs", String(q.sinceTs));
+    return request<LootHistoryRow[]>(`/api/wow/history?${p}`);
+  },
   probeGuild: (body: { region: string; clientId: string; clientSecret?: string; realmSlug: string; guildName: string }) =>
     request<GuildProbeResult>("/api/blizzard/probe-guild", { method: "POST", body: JSON.stringify(body) }),
 };

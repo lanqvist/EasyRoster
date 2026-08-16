@@ -1,8 +1,203 @@
+import { useEffect, useMemo, useState } from "react";
+import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
+import { api } from "../lib/api";
+import { useConfig } from "../lib/config-context";
+import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
+import { OBTAINED_STYLE } from "../components/BisSlotList";
+import { WowIntegrationCard } from "../components/WowIntegrationCard";
+import { CharacterDrawer } from "../components/CharacterDrawer";
+
+/**
+ * Лут-ночь: выбираем рейд → босса → предмет; справа — кому и насколько это нужно
+ * (тот же расчёт, что видит совет в RCLootCouncil через колонку BiS). Ниже — свежая история лута RCLC.
+ */
 export function RaidNightPage() {
+  const { config } = useConfig();
+  const [instances, setInstances] = useState<{ season: StaticDataStatus["season"]; all: InstanceRow[] } | null>(null);
+  const [instanceId, setInstanceId] = useState<number | null>(null);
+  const [view, setView] = useState<LootInstanceView | null>(null);
+  const [encounterId, setEncounterId] = useState<number | null>(null);
+  const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
+  const [selectedItem, setSelectedItem] = useState<ItemRow | null>(null);
+  const [history, setHistory] = useState<LootHistoryRow[]>([]);
+  const [selectedChar, setSelectedChar] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [onlyNeeded, setOnlyNeeded] = useState(true);
+
+  useEffect(() => {
+    api
+      .lootInstances()
+      .then((i) => {
+        setInstances(i);
+        const raid = i.season.raids.find((r) => r.encounters.length > 1) ?? i.season.raids[0];
+        if (raid) setInstanceId(raid.id);
+      })
+      .catch((e) => setErr((e as Error).message));
+    api.wowHistory({ limit: 40 }).then(setHistory).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (instanceId === null) return;
+    api
+      .lootInstance(instanceId)
+      .then(async (v) => {
+        setView(v);
+        setEncounterId(v.encounters[0]?.id ?? null);
+        setSelectedItem(null);
+        setWanters(await api.bisWanters(v.encounters.flatMap((e) => e.items.map((i) => i.id))));
+      })
+      .catch((e) => setErr((e as Error).message));
+  }, [instanceId]);
+
+  const enc = view?.encounters.find((e) => e.id === encounterId) ?? null;
+  const items = useMemo(() => {
+    if (!enc) return [];
+    return enc.items
+      .map((it) => ({ it, w: wanters[it.id] ?? [] }))
+      .filter((x) => !onlyNeeded || x.w.length > 0)
+      .sort((a, b) => b.w.filter((w) => w.obtained !== "yes").length - a.w.filter((w) => w.obtained !== "yes").length);
+  }, [enc, wanters, onlyNeeded]);
+
+  const ru = (config?.locale ?? "ru_RU").startsWith("ru");
+  const sel = selectedItem ? wanters[selectedItem.id] ?? [] : [];
+
   return (
     <div>
       <h1>Лут-ночь</h1>
-      <div className="placeholder">Фаза 4: экран распределения — по каждому дропу список персонажей по выгоде.</div>
+      <WowIntegrationCard compact />
+      {err && <div className="alert bad">{err}</div>}
+
+      <div className="row" style={{ marginBottom: 10 }}>
+        <select value={instanceId ?? ""} onChange={(e) => setInstanceId(Number(e.target.value))}>
+          {instances?.season.raids.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+          <optgroup label="Подземелья">
+            {instances?.season.dungeons.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </optgroup>
+        </select>
+        <select value={encounterId ?? ""} onChange={(e) => setEncounterId(Number(e.target.value))}>
+          {view?.encounters.map((e) => (
+            <option key={e.id} value={e.id}>{e.name}</option>
+          ))}
+        </select>
+        <label className="row" style={{ gap: 6 }}>
+          <input type="checkbox" checked={onlyNeeded} onChange={(e) => setOnlyNeeded(e.target.checked)} /> только нужные кому-то
+        </label>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="card" style={{ padding: "8px 12px" }}>
+          <h2 style={{ fontSize: 14 }}>{enc?.name ?? "—"}</h2>
+          <table>
+            <tbody>
+              {items.map(({ it, w }) => {
+                const need = w.filter((x) => x.obtained !== "yes");
+                return (
+                  <tr key={it.id} className={selectedItem?.id === it.id ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(it)}>
+                    <td style={{ width: 26, padding: "3px 4px" }}>
+                      <img src={iconUrl(it.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} />
+                    </td>
+                    <td>
+                      <span style={{ color: QUALITY_COLORS_NUM[it.quality ?? 4] }}>{(ru && it.nameRu) || it.name}</span>
+                      <div className="muted" style={{ fontSize: 11 }}>{it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}</div>
+                    </td>
+                    <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
+                      <span className="muted"> / {w.length}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {items.length === 0 && (
+                <tr>
+                  <td className="muted">{enc ? "Нет предметов, нужных ростеру (или BiS ещё не посчитан)" : "Выберите босса"}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="card" style={{ padding: "8px 12px" }}>
+          {selectedItem ? (
+            <>
+              <h2 style={{ fontSize: 14 }}>
+                <img src={iconUrl(selectedItem.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 6 }} />
+                <a href={wowheadUrl(selectedItem.id, [], ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[selectedItem.quality ?? 4] }}>
+                  {(ru && selectedItem.nameRu) || selectedItem.name}
+                </a>
+              </h2>
+              {sel.length === 0 ? (
+                <div className="muted">Никому из ростера не в BiS.</div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Кому</th>
+                      <th>Слот</th>
+                      <th className="num">#</th>
+                      <th>Статус</th>
+                      <th className="num">Апгрейд</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sel.map((w) => {
+                      const st = OBTAINED_STYLE[w.obtained];
+                      return (
+                        <tr key={w.characterId + w.slot} style={{ cursor: "pointer" }} onClick={() => setSelectedChar(w.characterId)}>
+                          <td>
+                            <span style={{ color: classColor(w.classId), fontWeight: 600 }}>{w.name}</span>
+                            <span className="muted"> · {specName(w.specId)}</span>
+                          </td>
+                          <td className="muted">{SLOT_NAMES_RU[w.slot] ?? w.slot}</td>
+                          <td className="num">{w.rank}</td>
+                          <td style={{ color: st.color }} title={w.obtainedDetail ?? ""}>{st.label}{w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}</td>
+                          <td className="num">{w.upgradePct != null ? `+${w.upgradePct}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </>
+          ) : (
+            <div className="muted">Выберите предмет слева.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: "8px 12px", marginTop: 16 }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <h2 style={{ fontSize: 14 }}>История лута RCLootCouncil (последние)</h2>
+          <button onClick={() => api.wowHistory({ limit: 40 }).then(setHistory)}>Обновить</button>
+        </div>
+        {history.length === 0 ? (
+          <div className="muted">Импортируйте историю (кнопка выше) — файлы SavedVariables читаются после /reload или выхода из игры.</div>
+        ) : (
+          <table style={{ fontSize: 12 }}>
+            <tbody>
+              {history.map((h) => (
+                <tr key={h.id}>
+                  <td className="muted" style={{ whiteSpace: "nowrap" }}>{h.date} {h.time?.slice(0, 5)}</td>
+                  <td>{h.playerDisplay}</td>
+                  <td>
+                    <a href={wowheadUrl(h.itemId, h.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer">
+                      {h.itemLink?.match(/\[(.+?)\]/)?.[1] ?? `#${h.itemId}`}
+                    </a>
+                  </td>
+                  <td className="muted">{h.response}</td>
+                  <td className="muted">{h.boss} · {h.instance}</td>
+                  <td className="muted">{h.ts ? relTime(h.ts) : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {selectedChar !== null && <CharacterDrawer id={selectedChar} onClose={() => setSelectedChar(null)} initialTab="bis" />}
     </div>
   );
 }

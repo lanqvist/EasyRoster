@@ -4,6 +4,7 @@ import { SyncService } from "./services/sync.js";
 import { StaticDataService } from "./services/static-data.js";
 import { ItemsService } from "./services/items.js";
 import { BisService } from "./services/bis/service.js";
+import { WowIntegrationService } from "./services/wow-integration.js";
 
 export interface Logger {
   info: (m: string) => void;
@@ -18,6 +19,7 @@ export interface AppContext {
   staticData: StaticDataService;
   items: ItemsService;
   bis: BisService;
+  wow: WowIntegrationService;
   log: Logger;
 }
 
@@ -31,5 +33,7 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
     await items.ensureItems(sync.repo.allEquippedItemIds());
   };
   const bis = new BisService(db, config, staticData, sync.repo, log);
-  return { config, db, sync, staticData, items, bis, log };
+  const wow = new WowIntegrationService(config, db, sync.repo, bis, staticData, log);
+  bis.historyProvider = () => wow.wonItemsByPlayer();
+  return { config, db, sync, staticData, items, bis, wow, log };
 }

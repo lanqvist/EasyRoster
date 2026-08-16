@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useConfig } from "../lib/config-context";
 import { RankPicker } from "../components/RankPicker";
+import { WowIntegrationCard } from "../components/WowIntegrationCard";
 
 export function SettingsPage() {
   const { config, save } = useConfig();
@@ -118,6 +119,10 @@ export function SettingsPage() {
       <button className="primary" disabled={busy} onClick={submit}>
         {busy ? "Сохраняю…" : "Сохранить"}
       </button>
+
+      <div style={{ marginTop: 24 }}>
+        <WowIntegrationCard />
+      </div>
     </div>
   );
 }

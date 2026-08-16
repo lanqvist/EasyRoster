@@ -1,6 +1,7 @@
 import {
   SPECS,
   SPEC_BY_ID,
+  rclcKeyForExport,
   type BisCharacterView,
   type BisSource,
   type BisSourceStatus,
@@ -28,6 +29,9 @@ export interface BisProgress {
 
 export class BisService {
   readonly repo: BisRepo;
+  /** Поставщик истории лута: ключ RCLC (lower) → itemId → ts. Устанавливается контекстом. */
+  historyProvider: (() => Map<string, Map<number, number>>) | null = null;
+  private historyCache: { at: number; data: Map<string, Map<number, number>> } | null = null;
   private running: Partial<Record<BisSource, boolean>> = {};
   private progress: BisProgress | null = null;
 
@@ -198,6 +202,18 @@ export class BisService {
     return this.staticData.items(ids);
   }
 
+  private wonFor(character: CharacterRow): Map<number, number> | undefined {
+    if (!this.historyProvider) return undefined;
+    if (!this.historyCache || Date.now() - this.historyCache.at > 10_000) {
+      this.historyCache = { at: Date.now(), data: this.historyProvider() };
+    }
+    return this.historyCache.data.get(rclcKeyForExport(character.name, character.realmName || character.realmSlug).toLowerCase());
+  }
+
+  invalidateHistoryCache(): void {
+    this.historyCache = null;
+  }
+
   characterBis(character: CharacterRow, specId?: number): BisCharacterView | null {
     const spec = specId ?? character.activeSpecId;
     if (!spec) return null;
@@ -226,6 +242,7 @@ export class BisService {
       perSlot: cfg.bis.perSlot,
       simMaxAgeMs: cfg.bis.simMaxAgeDays * 86400000,
       now: Date.now(),
+      won: this.wonFor(character),
     });
   }
 

@@ -146,6 +146,44 @@ export interface LootInstanceView {
   encounters: Array<{ id: number; name: string; items: ItemRow[] }>;
 }
 
+// ------------------------------------------------------------ фаза 4
+
+export interface AddonStatus {
+  wowPathValid: boolean;
+  rclcInstalled: boolean;
+  addonInstalled: boolean;
+  addonVersion: string | null;
+  addonSourceVersion: string | null;
+  dataTimestamp: number | null;
+  dataCharacters: number;
+  lastExportAt: number | null;
+  rclcSavedVariables: Array<{ path: string; mtime: number }>;
+  easyRosterSavedVariables: Array<{ path: string; mtime: number }>;
+  lootHistoryCount: number;
+  lastHistoryImportAt: number | null;
+}
+
+export interface LootHistoryRow {
+  id: string;
+  playerKey: string;
+  playerDisplay: string;
+  itemId: number;
+  itemLink: string | null;
+  bonusIds: number[];
+  response: string | null;
+  responseId: number | null;
+  boss: string | null;
+  instance: string | null;
+  difficultyId: number | null;
+  mapId: number | null;
+  date: string | null;
+  time: string | null;
+  ts: number | null;
+  owner: string | null;
+  class: string | null;
+  votes: number | null;
+}
+
 export interface ApiError {
   error: string;
   details?: unknown;

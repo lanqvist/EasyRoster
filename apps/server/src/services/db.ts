@@ -168,6 +168,37 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_sim_reports_char ON sim_reports(character_id, imported_at);
   `,
+  // v5 — фаза 4: история лута RCLootCouncil, заметки гильдии
+  `
+  CREATE TABLE IF NOT EXISTS loot_history (
+    id TEXT PRIMARY KEY,                  -- RCLC id "servertime-counter"
+    player_key TEXT NOT NULL,             -- "имя-Реалм" как в RCLC (нормализованный lower)
+    player_display TEXT NOT NULL,
+    item_id INTEGER NOT NULL,
+    item_link TEXT,
+    bonus_ids TEXT NOT NULL DEFAULT '[]',
+    response TEXT,
+    response_id INTEGER,
+    boss TEXT,
+    instance TEXT,
+    difficulty_id INTEGER,
+    map_id INTEGER,
+    date TEXT,                            -- YYYY/MM/DD
+    time TEXT,
+    ts INTEGER,                           -- unix ms (из даты/времени)
+    owner TEXT,
+    class TEXT,
+    votes INTEGER,
+    is_award_reason INTEGER,
+    imported_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_loot_history_player ON loot_history(player_key, item_id);
+  CREATE INDEX IF NOT EXISTS idx_loot_history_ts ON loot_history(ts);
+
+  ALTER TABLE characters ADD COLUMN public_note TEXT;
+  ALTER TABLE characters ADD COLUMN officer_note TEXT;
+  ALTER TABLE characters ADD COLUMN rank_name TEXT;
+  `,
 ];
 
 export class Db {

@@ -28,6 +28,8 @@ export interface EngineInput {
   perSlot: number;
   simMaxAgeMs: number;
   now: number;
+  /** предметы, полученные по истории RCLootCouncil: itemId → ts */
+  won?: Map<number, number>;
 }
 
 /** Балл кандидата внутри источника (0..100). */
@@ -125,7 +127,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
       if (pinned.has(`${slot}|${itemId}`)) score += 1000;
 
       const isTier = !!item?.itemSetId && (item.contains == null);
-      const { obtained, detail } = obtainedStatus({ itemId, item, originalItemId: e.originalItemId, equipped, bonuses });
+      const { obtained, detail } = obtainedStatus({ itemId, item, originalItemId: e.originalItemId, equipped, bonuses, won: input.won });
 
       const drops = new Map<string, BisEntry["drops"][number]>();
       for (const d of input.itemSources(itemId)) drops.set(`${d.instanceId}|${d.encounterId}`, d);
@@ -204,8 +206,9 @@ export function obtainedStatus(args: {
   originalItemId: number | null;
   equipped: EquipmentRow[];
   bonuses: ReadonlyMap<number, BonusEntry>;
+  won?: Map<number, number>;
 }): { obtained: ObtainedStatus; detail: string | null } {
-  const { itemId, item, originalItemId, equipped, bonuses } = args;
+  const { itemId, item, originalItemId, equipped, bonuses, won } = args;
   const same = equipped.find((e) => e.itemId === itemId);
   const bySet = !same && item?.itemSetId ? equipped.find((e) => e.setId === item.itemSetId && sameSlotFamily(e, item)) : undefined;
   const hit = same ?? bySet;
@@ -217,6 +220,12 @@ export function obtainedStatus(args: {
   }
   if (originalItemId && equipped.some((e) => e.itemId === originalItemId)) {
     return { obtained: "catalyst", detail: "надет рейдовый предмет — нужен Катализатор" };
+  }
+  // по истории лута RCLootCouncil (профиль в API обновляется только после логаута)
+  if (won) {
+    const ts = won.get(itemId);
+    if (ts !== undefined) return { obtained: "yes", detail: `получен по истории RCLC${ts ? " " + new Date(ts).toLocaleDateString("ru-RU") : ""}` };
+    if (originalItemId && won.has(originalItemId)) return { obtained: "catalyst", detail: "получен рейдовый предмет (история RCLC) — нужен Катализатор" };
   }
   return { obtained: "no", detail: null };
 }
