@@ -10,7 +10,7 @@ import { bisRoutes } from "./routes/bis.js";
 import { wowRoutes } from "./routes/wow.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
@@ -59,14 +59,27 @@ async function main(): Promise<void> {
   }
 
   const port = ctx.config.get().server.port;
-  await app.listen({ port, host: "127.0.0.1" });
-  app.log.info(`EasyRoster ${VERSION} → http://localhost:${port}`);
-  if (process.argv.includes("--open") || process.env.EASYROSTER_OPEN === "1") {
+  const openBrowser = async () => {
     const { exec } = await import("node:child_process");
     const url = `http://localhost:${port}`;
     const cmd = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
     exec(cmd, () => undefined);
+  };
+  const wantOpen = process.argv.includes("--open") || process.env.EASYROSTER_OPEN === "1";
+  try {
+    await app.listen({ port, host: "127.0.0.1" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EADDRINUSE") {
+      console.error(`
+Порт ${port} уже занят — вероятно, EasyRoster уже запущен. Открываю http://localhost:${port}`);
+      console.error(`Если это другая программа — измените server.port в data/config.json.`);
+      if (wantOpen) await openBrowser();
+      process.exit(0);
+    }
+    throw e;
   }
+  app.log.info(`EasyRoster ${VERSION} → http://localhost:${port}`);
+  if (wantOpen) await openBrowser();
 
   const shutdown = () => {
     app.close().finally(() => {

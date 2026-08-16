@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { applyTheme, getTheme, type Theme } from "./lib/theme";
 import { ConfigProvider, useConfig } from "./lib/config-context";
 import { SetupPage } from "./pages/SetupPage";
 import { RosterPage } from "./pages/RosterPage";
@@ -17,6 +19,12 @@ export function App() {
 
 function Shell() {
   const { config, loading, error } = useConfig();
+  const [theme, setTheme] = useState<Theme>(() => getTheme());
+  const toggleTheme = () => {
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    setTheme(next);
+  };
 
   if (loading && !config) return <div className="main">Загрузка…</div>;
   if (error && !config)
@@ -42,6 +50,11 @@ function Shell() {
         </nav>
         <div className="foot">
           {config?.guild.name} — {config?.guild.realmName} ({config?.region.toUpperCase()})
+          <div>
+            <button className="theme-toggle" onClick={toggleTheme} title="Переключить тему">
+              {theme === "dark" ? "☀ Светлая тема" : "☾ Тёмная тема"}
+            </button>
+          </div>
         </div>
       </aside>
       <main className="main">

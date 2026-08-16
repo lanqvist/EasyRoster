@@ -85,6 +85,7 @@ fs.writeFileSync(
   path.join(stage, "EasyRoster.cmd"),
   [
     "@echo off",
+    "chcp 65001 >nul",
     "rem EasyRoster portable — данные хранятся в папке data рядом с этим файлом",
     'cd /d "%~dp0"',
     "set EASYROSTER_DATA_DIR=%~dp0data",

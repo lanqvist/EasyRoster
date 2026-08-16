@@ -3,9 +3,19 @@ import { CLASS_COLORS, CLASS_IDS, CLASS_NAMES_RU, SPEC_BY_ID, type ClassId } fro
 export function classFile(classId: number) {
   return CLASS_IDS[classId as ClassId];
 }
+/** Слишком светлые цвета классов — затемняем в светлой теме. */
+const LIGHT_THEME_CLASS_COLORS: Partial<Record<ReturnType<typeof classFile>, string>> = {
+  PRIEST: "#7a8090",
+  ROGUE: "#b3a000",
+  MONK: "#0a9a5c",
+  HUNTER: "#6f9a3a",
+  MAGE: "#1f9ac2",
+};
 export function classColor(classId: number): string {
   const f = classFile(classId);
-  return f ? CLASS_COLORS[f] : "inherit";
+  if (!f) return "inherit";
+  if (document.documentElement.getAttribute("data-theme") === "light") return LIGHT_THEME_CLASS_COLORS[f] ?? CLASS_COLORS[f];
+  return CLASS_COLORS[f];
 }
 export function className(classId: number): string {
   const f = classFile(classId);

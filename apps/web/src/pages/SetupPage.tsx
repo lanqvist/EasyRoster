@@ -3,6 +3,7 @@ import type { GuildProbeResult, RealmOption } from "@easyroster/core";
 import { api } from "../lib/api";
 import { useConfig } from "../lib/config-context";
 import { RankPicker } from "../components/RankPicker";
+import { applyTheme, getTheme } from "../lib/theme";
 
 const STEPS = ["Blizzard API", "Гильдия", "Ранги", "Путь к WoW"];
 
@@ -87,9 +88,14 @@ export function SetupPage() {
 
   return (
     <div className="main" style={{ maxWidth: 820, margin: "0 auto" }}>
-      <h1>
-        Easy<span style={{ color: "var(--accent)" }}>Roster</span> — первый запуск
-      </h1>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1>
+          Easy<span style={{ color: "var(--accent)" }}>Roster</span> — первый запуск
+        </h1>
+        <button className="theme-toggle" onClick={() => { applyTheme(getTheme() === "dark" ? "light" : "dark"); setStep((s) => s); }}>
+          ☀/☾ тема
+        </button>
+      </div>
       <p className="muted">Все данные хранятся локально в папке <code>data/</code>. Ключи наружу не передаются.</p>
 
       <div className="steps">

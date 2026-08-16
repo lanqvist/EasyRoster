@@ -121,7 +121,7 @@ export class BisService {
       const hits = z.encounters.filter((e) => raidEncNames.has(e.name.toLowerCase())).length;
       if (hits > 0 && (!best || hits > best.hits)) best = { zone: z, hits };
     }
-    if (!best) throw new Error("Не найдена зона Warcraft Logs, совпадающая с рейдом сезона");
+    if (!best) throw new Error("Warcraft Logs ещё не добавил зону рейда сезона (появляется в день открытия рейда) — повторите позже; пока работают Icy Veins и Droptimizer");
     return best.zone.encounters.filter((e) => raidEncNames.has(e.name.toLowerCase()));
   }
 
