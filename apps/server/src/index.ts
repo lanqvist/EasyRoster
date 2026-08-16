@@ -4,13 +4,18 @@ import fastifyStatic from "@fastify/static";
 import type { HealthResponse } from "@easyroster/core";
 import { createContext } from "./context.js";
 import { configRoutes } from "./routes/config.js";
+import { rosterRoutes } from "./routes/roster.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
 const VERSION = "0.1.0";
 
 async function main(): Promise<void> {
-  const ctx = createContext();
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
+  const ctx = createContext({
+    info: (m) => app.log.info(m),
+    warn: (m) => app.log.warn(m),
+    error: (m) => app.log.error(m),
+  });
 
   app.get("/api/health", async (): Promise<HealthResponse> => ({
     ok: true,
@@ -20,6 +25,8 @@ async function main(): Promise<void> {
   }));
 
   await configRoutes(app, ctx);
+  await rosterRoutes(app, ctx);
+  ctx.sync.startScheduler();
 
   // Собранный фронтенд (если есть) — SPA fallback на index.html.
   if (fs.existsSync(WEB_DIST)) {

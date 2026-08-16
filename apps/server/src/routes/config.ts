@@ -18,7 +18,12 @@ export async function configRoutes(app: FastifyInstance, ctx: AppContext): Promi
 
   app.put("/api/config", async (req, reply) => {
     try {
+      const before = ctx.config.get();
       const cfg = ctx.config.update(req.body);
+      if (JSON.stringify(before.raiderRanks) !== JSON.stringify(cfg.raiderRanks)) {
+        ctx.sync.repo.recomputeRaiders(cfg.raiderRanks);
+      }
+      if (before.sync.intervalMinutes !== cfg.sync.intervalMinutes) ctx.sync.startScheduler();
       return toPublicConfig(cfg);
     } catch (e) {
       reply.code(400);

@@ -38,8 +38,16 @@ export class BlizzardClient {
     private readonly locale: string = "ru_RU",
   ) {}
 
+  /** Переопределяются в тестах (mock-сервер). */
+  static apiBaseOverride: string | null = process.env.EASYROSTER_BLIZZARD_API ?? null;
+  static oauthUrlOverride: string | null = process.env.EASYROSTER_BLIZZARD_OAUTH ?? null;
+
   get host(): string {
-    return `https://${this.region}.api.blizzard.com`;
+    return BlizzardClient.apiBaseOverride ?? `https://${this.region}.api.blizzard.com`;
+  }
+
+  private get oauthUrl(): string {
+    return BlizzardClient.oauthUrlOverride ?? "https://oauth.battle.net/token";
   }
 
   async getToken(): Promise<string> {
@@ -48,7 +56,7 @@ export class BlizzardClient {
       throw new BlizzardApiError(0, "oauth.battle.net/token", "Не заданы client id / secret Blizzard");
     }
     const basic = Buffer.from(`${this.creds.clientId}:${this.creds.clientSecret}`).toString("base64");
-    const res = await fetch("https://oauth.battle.net/token", {
+    const res = await fetch(this.oauthUrl, {
       method: "POST",
       headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: "grant_type=client_credentials",
@@ -116,6 +124,90 @@ export class BlizzardClient {
     const r = await this.get<GuildRoster>(`/data/wow/guild/${enc(realmSlug)}/${enc(nameSlug)}/roster`, "profile");
     return r.data!;
   }
+
+  private charPath(realmSlug: string, name: string, suffix = ""): string {
+    return `/profile/wow/character/${enc(realmSlug)}/${enc(name.toLowerCase())}${suffix}`;
+  }
+
+  /** {id, is_valid}; 404 → null (профиля нет). */
+  async characterStatus(realmSlug: string, name: string): Promise<CharacterStatus | null> {
+    try {
+      const r = await this.get<CharacterStatus>(this.charPath(realmSlug, name, "/status"), "profile");
+      return r.data;
+    } catch (e) {
+      if (e instanceof BlizzardApiError && (e.status === 404 || e.status === 403)) return null;
+      throw e;
+    }
+  }
+
+  async characterSummary(realmSlug: string, name: string, ifModifiedSince?: string) {
+    return this.get<CharacterSummary>(this.charPath(realmSlug, name), "profile", { ifModifiedSince });
+  }
+
+  async characterEquipment(realmSlug: string, name: string) {
+    const r = await this.get<CharacterEquipment>(this.charPath(realmSlug, name, "/equipment"), "profile");
+    return r.data!;
+  }
+
+  async characterSpecializations(realmSlug: string, name: string) {
+    const r = await this.get<CharacterSpecializations>(this.charPath(realmSlug, name, "/specializations"), "profile");
+    return r.data!;
+  }
+
+  async characterMedia(realmSlug: string, name: string) {
+    const r = await this.get<CharacterMedia>(this.charPath(realmSlug, name, "/character-media"), "profile");
+    return r.data!;
+  }
+}
+
+export interface CharacterStatus {
+  id: number;
+  is_valid: boolean;
+}
+
+export interface CharacterSummary {
+  id: number;
+  name: string;
+  level: number;
+  faction: { type: string; name: string };
+  character_class: { id: number; name: string };
+  active_spec?: { id: number; name: string };
+  realm: { id: number; slug: string; name: string };
+  guild?: { id: number; name: string; realm: { slug: string } };
+  average_item_level: number;
+  equipped_item_level: number;
+  last_login_timestamp: number;
+}
+
+export interface EquippedItem {
+  item: { id: number };
+  slot: { type: string; name: string };
+  quality: { type: string; name: string };
+  name: string;
+  level?: { value: number };
+  inventory_type?: { type: string; name: string };
+  bonus_list?: number[];
+  context?: number;
+  name_description?: { display_string: string };
+  enchantments?: Array<{ enchantment_id?: number; enchantment_slot?: { id: number; type: string } }>;
+  sockets?: Array<{ socket_type: { type: string }; item?: { id: number; name: string } }>;
+  set?: { item_set: { id: number; name: string } };
+}
+
+export interface CharacterEquipment {
+  equipped_items: EquippedItem[];
+}
+
+export interface CharacterSpecializations {
+  active_specialization?: { id: number; name: string };
+  specializations?: Array<{
+    specialization: { id: number; name: string };
+    loadouts?: Array<{ is_active: boolean; talent_loadout_code: string }>;
+  }>;
+}
+
+export interface CharacterMedia {
+  assets?: Array<{ key: string; value: string }>;
 }
 
 function enc(s: string): string {
