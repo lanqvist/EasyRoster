@@ -1,0 +1,95 @@
+:root {
+  --bg: #14161b;
+  --bg-elev: #1c1f26;
+  --bg-elev-2: #242833;
+  --border: #2f3441;
+  --text: #e6e4dc;
+  --text-muted: #9a9dab;
+  --accent: #d9a441;      /* тёплое золото, как рамка эпика */
+  --accent-ink: #1a1408;
+  --ok: #4fbf7a;
+  --warn: #e0b64a;
+  --bad: #e06060;
+  --radius: 6px;
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--font);
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0 0 .5em; text-wrap: balance; font-weight: 600; }
+h1 { font-size: 22px; }
+h2 { font-size: 17px; }
+p { margin: 0 0 .75em; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.muted { color: var(--text-muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* layout */
+.shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100%; }
+.sidebar {
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  padding: 18px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.brand { font-weight: 700; letter-spacing: .04em; font-size: 15px; margin-bottom: 14px; padding: 0 8px; }
+.brand span { color: var(--accent); }
+.nav a {
+  display: block; padding: 8px 10px; border-radius: var(--radius);
+  color: var(--text); font-size: 14px;
+}
+.nav a:hover { background: var(--bg-elev-2); text-decoration: none; }
+.nav a.active { background: var(--bg-elev-2); color: var(--accent); }
+.sidebar .foot { margin-top: auto; font-size: 12px; color: var(--text-muted); padding: 0 8px; }
+.main { padding: 26px 32px; max-width: 1200px; }
+
+/* cards & forms */
+.card {
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.field .hint { font-size: 12px; color: var(--text-muted); }
+input, select {
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 7px 9px; font: inherit;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+button {
+  background: var(--bg-elev-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 7px 14px; font: inherit; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .55; cursor: default; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.alert { border-radius: var(--radius); padding: 10px 12px; margin: 10px 0; border: 1px solid; }
+.alert.bad { border-color: var(--bad); color: #f2b3b3; background: rgba(224,96,96,.08); }
+.alert.ok { border-color: var(--ok); color: #b9ecc9; background: rgba(79,191,122,.08); }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 600; }
+tr.selected td { background: rgba(217,164,65,.08); }
+
+.steps { display: flex; gap: 6px; margin-bottom: 18px; }
+.steps span { padding: 4px 10px; border-radius: 999px; background: var(--bg-elev-2); font-size: 12px; color: var(--text-muted); }
+.steps span.active { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.steps span.done { color: var(--ok); }
+
+.rank-chip { display: inline-flex; gap: 6px; align-items: center; padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px; }
+.rank-chip.on { border-color: var(--accent); background: rgba(217,164,65,.12); }
+
+.placeholder { color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius); padding: 30px; text-align: center; }

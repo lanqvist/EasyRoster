@@ -1,0 +1,11 @@
+## Interface: 120100
+## Title: RCLootCouncil - EasyRoster
+## Notes: Колонка BiS в окне голосования RCLootCouncil на основе данных EasyRoster
+## Author: EasyRoster
+## Version: 0.1.0
+## Dependencies: RCLootCouncil
+## SavedVariables: EasyRosterDB
+## X-Category: Loot
+
+Data\db.lua
+core.lua

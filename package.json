@@ -1,0 +1,25 @@
+{
+  "name": "easyroster",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Локальный менеджер ростера рейдового статика WoW: синк персонажей, BiS-листы, интеграция с RCLootCouncil",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=apps/web && npm run build --workspace=apps/server",
+    "start": "npm run start --workspace=apps/server",
+    "typecheck": "tsc -b",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
