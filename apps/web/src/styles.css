@@ -136,3 +136,6 @@ tr.selected td { background: rgba(217,164,65,.08); }
 .slot-compare-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 64px; background: var(--bg); z-index: 2; }
 .slot-compare-row:hover { filter: brightness(1.04); }
 @media (max-width: 900px) { .slot-compare-head, .slot-compare-row { grid-template-columns: 80px 1fr; } .slot-compare-row > div:nth-child(3) { grid-column: 1 / -1; } }
+/* мини-карточка слота (Лут-ночь) */
+.sf-title { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 2px; }
+.sf-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(90px, 0.7fr) 84px 52px 40px; gap: 0 6px; align-items: center; padding: 2px 4px; }
