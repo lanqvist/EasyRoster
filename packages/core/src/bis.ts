@@ -64,6 +64,9 @@ export interface AltRef {
   pct: number;
   kind: SourceKind;
   sourceName: string;
+  icon?: string | null;
+  quality?: number | null;
+  bonusIds?: number[];
 }
 
 export interface BisAlternatives {

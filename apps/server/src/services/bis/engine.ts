@@ -284,6 +284,9 @@ export function computeAlternatives(entries: BisEntry[]): void {
     pct: o.simSelected?.pct ?? 0,
     kind: o.sourceKind,
     sourceName: o.drops[0]?.encounterName ?? o.sources[0]?.note ?? "",
+    icon: o.icon,
+    quality: o.quality,
+    bonusIds: o.bonusIds,
   });
   for (const e of entries) {
     const mine = encSet(e);

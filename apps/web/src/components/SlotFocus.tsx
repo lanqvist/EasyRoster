@@ -22,6 +22,13 @@ function shortSource(e: BisEntry): string {
   return enc ? `${kind} · ${enc}` : kind;
 }
 
+/** Крафт/прочее из name_description Blizzard → коротко. */
+function shortTrackName(t: string | null | undefined): string {
+  if (!t) return "";
+  if (/изготовлен|crafted/i.test(t)) return "Крафт";
+  return t.length > 14 ? t.slice(0, 13) + "…" : t;
+}
+
 /** Строка кандидата: [иконка] имя | источник | трек | % */
 function Row({ e, ru, highlight, index }: { e: BisEntry; ru: boolean; highlight?: boolean; index?: number }) {
   const dt = e.dropTrack;
@@ -103,7 +110,7 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
             <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} ru={ru} size={16} style={{ fontSize: 12 }} />
           </div>
           <div />
-          <div className="muted num" style={{ fontSize: 11, whiteSpace: "nowrap" }}>{it.track ? `${TRACK_NAMES_RU[it.track.name] ?? it.track.name} ${it.track.level}/${it.track.max}` : it.trackName ?? ""}</div>
+          <div className="muted num" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={it.trackName ?? ""}>{it.track ? `${TRACK_NAMES_RU[it.track.name] ?? it.track.name} ${it.track.level}/${it.track.max}` : shortTrackName(it.trackName)}</div>
           <div className="num" style={{ textAlign: "right" }}>{it.ilvl ?? "?"}</div>
           <div />
         </div>
@@ -115,10 +122,22 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
           <Row e={dropped} ru={ru} highlight />
           {verdict && <div style={{ color: verdict.color, margin: "2px 0 0 22px", fontWeight: 600 }}>{verdict.text}</div>}
           {alt && (
-            <div className="muted" style={{ margin: "1px 0 0 22px" }}>
-              без рейда можно взять: {alt.name} ({KIND_LABEL[alt.kind]}) {pctText(alt.pct)}
-              {dropped.alternatives?.gap != null && dropped.alternatives.gap > 0.05 && <span> · выпавшее лучше на ▲{dropped.alternatives.gap.toFixed(1)}</span>}
-            </div>
+            <>
+              <div className="sf-title" style={{ marginTop: 8 }}>
+                Без рейда можно взять
+                {dropped.alternatives?.gap != null && dropped.alternatives.gap > 0.05 && <span style={{ textTransform: "none", letterSpacing: 0 }}> · выпавшее лучше на ▲{dropped.alternatives.gap.toFixed(1)}</span>}
+              </div>
+              <div className="sf-row">
+                <div />
+                <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={16} style={{ fontSize: 12 }} />
+                </div>
+                <div className="muted" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${KIND_LABEL[alt.kind]}${alt.sourceName ? ` · ${alt.sourceName}` : ""}`}>{KIND_LABEL[alt.kind]}{alt.sourceName ? ` · ${alt.sourceName}` : ""}</div>
+                <div />
+                <div className="num" style={{ fontSize: 12, fontWeight: 600, textAlign: "right", color: pctColor(alt.pct) }}>{pctText(alt.pct)}</div>
+                <div />
+              </div>
+            </>
           )}
         </>
       )}

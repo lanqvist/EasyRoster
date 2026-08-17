@@ -44,8 +44,10 @@ export function ItemRow({
           {dt && <Chip title="Трек и ilvl для выбранной сложности">{TRACK_NAMES_RU[dt.name] ?? dt.name}{dt.ilvl ? ` ${dt.ilvl}` : ""}</Chip>}
         </div>
         {showAlt && alt && (
-          <div className="muted" style={{ fontSize: 11 }}>
-            альт. {KIND_LABEL[alt.kind]}: {alt.name} {alt.pct > 0 ? "+" : ""}{alt.pct.toFixed(1)}%
+          <div className="muted" style={{ fontSize: 11, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+            <span>альт. {KIND_LABEL[alt.kind]}{alt.sourceName ? ` (${alt.sourceName})` : ""}:</span>
+            <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={14} muted style={{ fontSize: 11 }} />
+            <span style={{ color: alt.pct > 0.05 ? "var(--ok)" : undefined }}>{alt.pct > 0 ? "+" : ""}{alt.pct.toFixed(1)}%</span>
             {a?.gap != null && (a.gap > 0.05 ? <span style={{ color: a.gap >= 2 ? "var(--ok)" : a.gap >= 0.8 ? "var(--warn)" : undefined }}> · незаменимость ▲{a.gap.toFixed(1)}</span> : " · заменим")}
           </div>
         )}
