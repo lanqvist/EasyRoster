@@ -10,6 +10,7 @@ export async function lootRoutes(app: FastifyInstance, ctx: AppContext): Promise
     const q = z.object({ force: z.boolean().optional() }).parse(req.body ?? {});
     try {
       const r = await ctx.staticData.refresh(q.force ?? false);
+      if (!r.skipped) ctx.bis.invalidateCache();
       // подтянуть русские имена предметов сезона в фоне (если есть ключи Blizzard)
       void ctx.items.localizeSeasonItems().then(() => ctx.items.localizeSeasonInstances()).catch(() => undefined);
       return r;

@@ -38,11 +38,53 @@ function SD:OnLootTable()
 	end
 end
 
+-- Ключи записи, которые аддон реально читает (всё остальное — служебное для веб-приложения, по сети не шлём)
+local SENT_KEYS = { "r", "s", "sl", "sc", "p", "pt", "dd", "dt", "hp", "ap", "ai", "as", "ag", "an", "am", "ar", "av", "ak", "t", "tp", "t4", "t2", "tc", "d", "c", "k" }
+
+--- Имена участников группы в нижнем регистре ("имя-реалм"); nil если не в группе
+local function groupNames()
+	local n = GetNumGroupMembers()
+	if not n or n == 0 then return nil end
+	local out = {}
+	local prefix = IsInRaid() and "raid" or "party"
+	for i = 1, n do
+		local unit = prefix .. i
+		if prefix == "party" and i == n then unit = "player" end
+		local name = addon.UnitName and addon:UnitName(unit)
+		if not name then
+			local short, realm = UnitName(unit)
+			if short then name = short .. "-" .. ((realm and realm ~= "" and realm) or GetNormalizedRealmName() or "") end
+		end
+		if name then out[string.lower(name)] = true end
+	end
+	return out
+end
+
+local lastRequestAnswered = {}
+local lastSent = {} -- itemID -> timestamp последней рассылки (не спамить одно и то же)
+
 function SD:SendItemData(itemID)
 	if not (EasyRosterTimestamp and EasyRosterTimestamp > 0) then return end
+	if lastSent[itemID] == EasyRosterTimestamp then return end
 	local entries = ER:GetEntriesForItem(itemID)
 	if next(entries) == nil then return end
-	ER.Send("group", "er_data", itemID, EasyRosterTimestamp, entries)
+	-- только участники текущей группы и только нужные поля: payload в 2–3 раза меньше
+	local group = groupNames()
+	local slim = {}
+	local any = false
+	for name, e in pairs(entries) do
+		if not group or group[string.lower(name)] then
+			local t = {}
+			for _, k in ipairs(SENT_KEYS) do
+				if e[k] ~= nil then t[k] = e[k] end
+			end
+			slim[name] = t
+			any = true
+		end
+	end
+	if not any then return end
+	lastSent[itemID] = EasyRosterTimestamp
+	ER.Send("group", "er_data", itemID, EasyRosterTimestamp, slim)
 end
 
 function SD:OnDataReceived(sender, itemID, timestamp, entries)
@@ -57,6 +99,10 @@ end
 
 function SD:OnDataRequested(sender, itemID)
 	if not itemID then return end
-	-- отвечаем только если наши данные свежее уже разосланных
+	-- на запрос отвечаем даже если уже слали (у запросившего данных нет), но не чаще раза в 10 с на предмет
+	local now = GetTime()
+	if (lastRequestAnswered[itemID] or 0) > now - 10 then return end
+	lastRequestAnswered[itemID] = now
+	lastSent[itemID] = nil
 	self:SendItemData(itemID)
 end

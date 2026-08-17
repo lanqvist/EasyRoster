@@ -283,9 +283,51 @@ export class BisService {
     return out;
   }
 
+  /**
+   * Кэш готовых view: ключ — персонаж/спека/сложность, версия — дешёвый «отпечаток» всего, от чего зависит расчёт
+   * (кандидаты, ручные правки, история лута, синк профиля, конфиг), плюс TTL 5 мин на случай того, что отпечаток не поймал
+   * (обновление справочников, истечение свежести сима).
+   */
+  private viewCache = new Map<string, { version: string; at: number; view: BisCharacterView }>();
+  private versionCache: { at: number; value: string } | null = null;
+
+  private dataVersion(): string {
+    // отпечаток кэшируем на 1 с — за один запрос страницы characterBis вызывается до 46 раз
+    if (this.versionCache && Date.now() - this.versionCache.at < 1000) return this.versionCache.value;
+    const c = this.db.conn;
+    const cand = c.prepare("SELECT COUNT(*) AS n, MAX(fetched_at) AS t, MAX(id) AS m FROM bis_candidates").get() as { n: number; t: number | null; m: number | null };
+    const man = c.prepare("SELECT COUNT(*) AS n, MAX(id) AS m FROM bis_manual").get() as { n: number; m: number | null };
+    const hist = c.prepare("SELECT COUNT(*) AS n FROM loot_history").get() as { n: number };
+    const cfg = this.config.get();
+    const value = [cand.n, cand.t, cand.m, man.n, man.m, hist.n, JSON.stringify({ b: cfg.bis, s: cfg.season, d: cfg.sim.dungeonTracks })].join("|");
+    this.versionCache = { at: Date.now(), value };
+    return value;
+  }
+
+  /** Сбросить кэш view (после массовых изменений, например обновления справочников). */
+  invalidateCache(): void {
+    this.viewCache.clear();
+    this.versionCache = null;
+  }
+
   characterBis(character: CharacterRow, specId?: number, opts: { difficulty?: RaidDifficulty } = {}): BisCharacterView | null {
     const spec = specId ?? character.activeSpecId;
     if (!spec) return null;
+    const cfg = this.config.get();
+    const difficulty = opts.difficulty ?? cfg.season.raidDifficulty;
+    const key = `${character.id}|${spec}|${difficulty}`;
+    const version = `${this.dataVersion()}|${character.profileSyncedAt ?? 0}|${character.talentsOverride ?? ""}|${character.raidSpecId ?? ""}`;
+    const hit = this.viewCache.get(key);
+    if (hit && hit.version === version && Date.now() - hit.at < 5 * 60000) return hit.view;
+    const view = this.computeCharacterBis(character, spec, difficulty);
+    if (view) {
+      if (this.viewCache.size > 400) this.viewCache.clear();
+      this.viewCache.set(key, { version, at: Date.now(), view });
+    }
+    return view;
+  }
+
+  private computeCharacterBis(character: CharacterRow, spec: number, difficulty: RaidDifficulty): BisCharacterView | null {
     const cfg = this.config.get();
     const candidates = this.repo.candidatesForSpec(spec, character.id);
     const manual = this.repo.manualRules(spec, character.id);
@@ -319,7 +361,7 @@ export class BisService {
       now: Date.now(),
       won: this.wonFor(character),
       sourceKindOf: (id) => this.sourceKindOf(id),
-      raidDifficulty: opts.difficulty ?? cfg.season.raidDifficulty,
+      raidDifficulty: difficulty,
       trackIlvl: this.trackIlvls(),
       dungeonTrack: cfg.sim.dungeonTracks[0] ?? "Hero",
     });
