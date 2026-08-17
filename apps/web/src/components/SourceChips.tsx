@@ -84,10 +84,9 @@ export function AltLine({ e }: { e: BisEntry }) {
   const gapColor = a.gap == null ? "var(--text-muted)" : a.gap >= 2 ? "var(--ok)" : a.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)";
   return (
     <div className="muted" style={{ fontSize: 11 }} title={a.best && a.best !== f ? `Лучшая из любого источника: ${a.best.name} (${KIND_LABEL[a.best.kind]}) ${a.best.pct > 0 ? "+" : ""}${a.best.pct.toFixed(1)}%` : undefined}>
-      альт: {f.name} ({KIND_LABEL[f.kind]}{f.sourceName ? ` · ${f.sourceName}` : ""}) {f.pct > 0 ? "+" : ""}
-      {f.pct.toFixed(1)}%
-      {a.gap != null && <span style={{ color: gapColor }}> · незаменимость ▲{a.gap.toFixed(1)}</span>}
-      {a.count > 0 && <span> · ≥95%: {a.count}</span>}
+      альт. {KIND_LABEL[f.kind]}: {f.name}{f.sourceName ? ` (${f.sourceName})` : ""} {f.pct > 0 ? "+" : ""}{f.pct.toFixed(1)}%
+      {a.gap != null && a.gap > 0.05 && <span style={{ color: gapColor }}> · незаменимость ▲{a.gap.toFixed(1)}</span>}
+      {a.gap != null && a.gap <= 0.05 && <span> · заменим</span>}
     </div>
   );
 }

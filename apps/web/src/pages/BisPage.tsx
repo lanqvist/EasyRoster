@@ -98,17 +98,13 @@ export function BisPage() {
                 ))}
             </tbody>
           </table>
-          <div className="muted" style={{ fontSize: 12, maxWidth: 360 }}>
+          <div className="muted" style={{ fontSize: 12, maxWidth: 360 }} title="Icy Veins — авторские BiS-списки (Overall / Raid / M+ / тир / тринкеты). WCL — популярность предметов у топ-парсов Mythic текущего рейда. Итог = взвешенная сумма; персональный сим (SimC/Droptimizer, если свежий) поднимает предметы по % апгрейда.">
             {status?.progress ? (
               <div>
                 {SOURCE_LABEL[status.progress.source]}: {status.progress.done}/{status.progress.total} — {status.progress.current}
               </div>
             ) : (
-              <>
-                <div>Icy Veins — авторские BiS-списки (Overall / Raid / M+ / тир / тринкеты).</div>
-                <div>WCL — популярность предметов у топ-парсов Mythic текущего рейда{config?.warcraftLogs.hasSecret ? "" : " (нужны ключи в Настройках)"}.</div>
-                <div>Итог = взвешенная сумма; персональный Droptimizer (если свежий) поднимает предметы по % апгрейда.</div>
-              </>
+              <span>ⓘ как считается{config?.warcraftLogs.hasSecret ? "" : " · WCL: нужны ключи в Настройках"}</span>
             )}
           </div>
         </div>

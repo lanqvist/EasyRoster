@@ -37,6 +37,35 @@ export function WowIntegrationCard({ compact = false }: { compact?: boolean }) {
   if (!st) return <div className="card muted">Проверяю установку WoW…</div>;
 
   const dataAge = st.dataTimestamp ? relTime(st.dataTimestamp) : "—";
+  if (compact) {
+    const dot = (ok: boolean | null, label: string, title?: string) => (
+      <span title={title} style={{ marginRight: 12, whiteSpace: "nowrap" }}>
+        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, marginRight: 5, background: ok == null ? "var(--text-muted)" : ok ? "var(--ok)" : "var(--bad)" }} />
+        {label}
+      </span>
+    );
+    return (
+      <div className="card" style={{ padding: "8px 12px", marginBottom: 12 }}>
+        <div className="row" style={{ justifyContent: "space-between", fontSize: 12 }}>
+          <div className="row" style={{ gap: 0 }}>
+            {dot(st.wowPathValid, "WoW", "Папка _retail_")}
+            {dot(st.rclcInstalled, "RCLootCouncil")}
+            {dot(st.addonInstalled ? st.addonVersion === st.addonSourceVersion : false, st.addonInstalled ? `аддон v${st.addonVersion}` : "аддон не установлен", st.addonInstalled && st.addonVersion !== st.addonSourceVersion ? `доступна ${st.addonSourceVersion}` : "")}
+            {dot(!!st.dataTimestamp, st.dataTimestamp ? `db.lua ${dataAge}` : "db.lua нет", st.dataTimestamp ? `персонажей ${st.dataCharacters}` : "")}
+            {dot(st.lootHistoryCount > 0, `история ${st.lootHistoryCount}`, st.lastHistoryImportAt ? `импорт ${relTime(st.lastHistoryImportAt)}` : "")}
+          </div>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="primary" style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("export", async () => { const r = await api.wowExport(); return `db.lua записан: ${r.characters} перс. — в игре /reload`; })}>
+              {busy === "export" ? "…" : "Синк в игру"}
+            </button>
+            <button style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("hist", async () => { const r = await api.wowImportHistory(); return `История RCLC: новых ${r.added}`; })}>История</button>
+            <button style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("install", async () => { const r = await api.wowInstallAddon(); return `Аддон обновлён (${r.files} файлов) — /reload`; })} title="Установить/обновить аддон">Аддон</button>
+          </div>
+        </div>
+        {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`} style={{ marginBottom: 0 }}>{msg.text}</div>}
+      </div>
+    );
+  }
   return (
     <div className="card">
       {!compact && <h2>Интеграция с WoW</h2>}

@@ -23,8 +23,9 @@ export function SimBadge({ sources }: { sources: BisEntry["sources"] }) {
     .sort((a, b) => b.pct - a.pct);
   const best = parts[0]!;
   return (
-    <div style={{ color: best.pct > 0 ? "var(--ok)" : "var(--text-muted)", fontSize: 11 }} title={parts.map((p) => `${p.text} ${p.tip}`).join("\n")}>
-      сим {parts.map((p) => p.text).join(" · ")}
+    <div style={{ color: best.pct > 0 ? "var(--ok)" : "var(--text-muted)", fontSize: 12, fontWeight: 600 }} title={"сим по трекам:\n" + parts.map((p) => `${p.text} ${p.tip}`).join("\n")}>
+      {best.text}
+      {parts.length > 1 && <span className="muted" style={{ fontWeight: 400 }}> · {parts.slice(1, 3).map((p) => p.text.split(" (")[0]).join(" · ")}</span>}
     </div>
   );
 }
@@ -64,7 +65,7 @@ export function BisSlotList({
                 const st = OBTAINED_STYLE[e.obtained];
                 return (
                   <tr key={e.itemId} style={{ background: e.rank === 1 ? st.bg : undefined }}>
-                    <td className="num muted" style={{ width: 22, padding: "3px 6px" }}>{e.rank}</td>
+                    <td className="num muted" style={{ width: 22, padding: "3px 6px" }} title={`Балл объединения ${e.score} · ${[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}`}>{e.rank}</td>
                     <td style={{ width: 26, padding: "3px 4px" }}>
                       <img src={iconUrl(e.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
                     </td>
@@ -78,9 +79,7 @@ export function BisSlotList({
                       </div>
                       <AltLine e={e} />
                     </td>
-                    <td className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }} title={e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\n")}>
-                      {[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}
-                      <span className="num"> · {e.score}</span>
+                    <td className="num" style={{ fontSize: 12, whiteSpace: "nowrap", textAlign: "right" }} title={`Источники: ${[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")} · балл ${e.score}\n${e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\n")}`}>
                       <SimBadge sources={e.sources} />
                     </td>
                     <td style={{ color: st.color, fontSize: 12, whiteSpace: "nowrap" }} title={e.obtainedDetail ?? ""}>

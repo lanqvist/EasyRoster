@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { applyTheme, getTheme, type Theme } from "./lib/theme";
 import { ConfigProvider, useConfig } from "./lib/config-context";
@@ -21,7 +21,26 @@ export function App() {
   );
 }
 
+/** Пере-инициализация тултипов Wowhead после любых изменений DOM (React рендерит ссылки динамически). */
+function useWowheadTooltips() {
+  useEffect(() => {
+    let timer: number | null = null;
+    const refresh = () => {
+      timer = null;
+      const wp = (window as unknown as { $WowheadPower?: { refreshLinks?: () => void } }).$WowheadPower;
+      wp?.refreshLinks?.();
+    };
+    const obs = new MutationObserver(() => {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(refresh, 250);
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    return () => obs.disconnect();
+  }, []);
+}
+
 function Shell() {
+  useWowheadTooltips();
   const { config, loading, error } = useConfig();
   const [theme, setTheme] = useState<Theme>(() => getTheme());
   const toggleTheme = () => {

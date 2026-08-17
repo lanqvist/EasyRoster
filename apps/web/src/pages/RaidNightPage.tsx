@@ -146,7 +146,7 @@ export function RaidNightPage() {
                       <th className="num">#</th>
                       <th>Статус</th>
                       <th className="num" title="% сима для выбранной сложности">Апгрейд</th>
-                      <th title="Лучшая фармабельная альтернатива (M+/крафт)">Альтернатива</th>
+                      <th title="Лучшая фармабельная альтернатива (M+/крафт): её % и источник; название — при наведении">Альт.</th>
                       <th className="num" title="Незаменимость: апгрейд минус фармабельная альтернатива">▲ Gap</th>
                     </tr>
                   </thead>
@@ -166,15 +166,15 @@ export function RaidNightPage() {
                             {w.upgradePct != null ? `${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}
                             {w.simTrack && <span className="muted" style={{ fontSize: 11 }}> {w.simTrack}</span>}
                           </td>
-                          <td className="muted" style={{ fontSize: 12 }}>
+                          <td className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }} title={(() => { const a = w.alt?.farmable ?? w.alt?.best; return a ? `${a.name} (${KIND_LABEL[a.kind]}${a.sourceName ? ` · ${a.sourceName}` : ""})` : ""; })()}>
                             {(() => {
                               const a = w.alt?.farmable ?? w.alt?.best;
                               if (!a) return "—";
-                              return `${a.name} (${KIND_LABEL[a.kind]}) ${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}%`;
+                              return `${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}% ${KIND_LABEL[a.kind]}`;
                             })()}
                           </td>
-                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600 }}>
-                            {w.alt?.gap != null ? `▲${w.alt.gap.toFixed(1)}` : ""}
+                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }} title="Насколько лучше фармабельной альтернативы">
+                            {w.alt?.gap == null ? "" : w.alt.gap > 0.05 ? `▲${w.alt.gap.toFixed(1)}` : <span className="muted" style={{ fontWeight: 400 }}>заменим</span>}
                           </td>
                         </tr>
                       );
