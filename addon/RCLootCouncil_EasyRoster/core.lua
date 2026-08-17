@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.6.2"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.6.3"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -145,7 +145,7 @@ function ER:FormatEntry(entry, track)
 	end
 	local text = rankText
 	if entry.k == 1 then text = text .. " |cff9a9dab(токен)|r" end
-	if entry.c == 1 then text = text .. " |cff9a9dab(→катализ.)|r" end
+	if entry.c == 1 then text = text .. " |cff9a9dab(катализ.)|r" end
 	if entry.tc == 4 then text = text .. " |cff4fbf7aзакроет 4pc|r" elseif entry.tc == 2 then text = text .. " |cffe0b64aзакроет 2pc|r" end
 	if not self:GetOpt("showRankOnly") then
 		text = text .. " " .. st.color .. st.text .. "|r"
@@ -158,7 +158,7 @@ function ER:FormatEntry(entry, track)
 		-- незаменимость: насколько лучше фармабельной альтернативы (в ячейке — только если нет отдельных колонок)
 		if entry.ag and not self:GetOpt("showAltColumns") then
 			local gcol = entry.ag >= 2 and "|cff4fbf7a" or (entry.ag >= 0.8 and "|cffe0b64a" or "|cff9a9dab")
-			text = text .. string.format(" %s▲%.1f|r", gcol, entry.ag)
+			text = text .. string.format(" %s(%+.1f)|r", gcol, entry.ag)
 		end
 	end
 	return text
@@ -225,7 +225,7 @@ local function diffColor(diff)
 end
 ER.DiffColor = diffColor
 
---- Короткий текст ячейки колонки альтернативы: "+2.5% ▲0.4" (▲ = насколько выпавшее лучше)
+--- Короткий текст ячейки колонки альтернативы: "+2.5% (+0.4)" — в скобках насколько выпавшее лучше альтернативы (в WoW-шрифтах нет спецсимволов)
 function ER:FormatAlt(entry, key, track)
 	if not entry then return nil end
 	local a, pct = self:AltFor(entry, key, track)
@@ -239,11 +239,11 @@ function ER:FormatAlt(entry, key, track)
 	local col = diffColor(diff)
 	local text = string.format("%s%+.1f%%|r", pct > 0 and "|cff7cc4ff" or "|cff9a9dab", pct)
 	if diff >= 0.05 then
-		text = text .. string.format(" %s▲%.1f|r", col, diff)
+		text = text .. string.format(" %s(%+.1f)|r", col, diff)
 	elseif diff <= -0.05 then
-		text = text .. string.format(" %s▼%.1f|r", col, -diff)
+		text = text .. string.format(" %s(%+.1f)|r", col, diff)
 	else
-		text = text .. " |cff9a9dab≈|r"
+		text = text .. " |cff9a9dab(=)|r"
 	end
 	return text
 end
@@ -304,7 +304,7 @@ function ER:TooltipLines(entry, name, track)
 		return lines
 	end
 	local st = STATUS_TEXT[entry.s] or STATUS_TEXT.n
-	tinsert(lines, string.format("Слот: %s · место в листе: #%d · балл %s", tostring(entry.sl or "?"), entry.r or 0, tostring(entry.sc or "?")))
+	tinsert(lines, string.format("Слот: %s - место в листе: #%d - балл %s", tostring(entry.sl or "?"), entry.r or 0, tostring(entry.sc or "?")))
 	tinsert(lines, "Статус: " .. st.color .. st.text .. "|r" .. (entry.d and (" — " .. entry.d) or ""))
 	if entry.p then
 		if type(entry.pt) == "table" then
@@ -312,7 +312,7 @@ function ER:TooltipLines(entry, name, track)
 			for _, tr in ipairs({ "Champion", "Hero", "Myth" }) do
 				if entry.pt[tr] then tinsert(parts, string.format("%s %+.1f%%", tr, entry.pt[tr])) end
 			end
-			tinsert(lines, "Сим: " .. table.concat(parts, " · "))
+			tinsert(lines, "Сим: " .. table.concat(parts, " - "))
 		else
 			tinsert(lines, string.format("Сим: %+.1f%%", entry.p))
 		end
@@ -329,14 +329,14 @@ function ER:TooltipLines(entry, name, track)
 		tinsert(lines, string.format("Лучшая альтернатива: %s (%s) %+.1f%%", self:ItemName(entry.ai) or "?", SRC[entry.as or "o"] or "?", entry.ap or 0))
 	end
 	if entry.ag then
-		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" · альтернатив ≥95%%: " .. entry.an) or ""))
+		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" - альтернатив ≥95%%: " .. entry.an) or ""))
 	end
 	if entry.t == 1 then
 		local tl = "Тир-предмет"
-		if entry.tp then tl = tl .. string.format(" · надето %d/5", entry.tp) end
-		if entry.t4 then tl = tl .. string.format(" · 4pc = %+.1f%%", entry.t4) end
-		if entry.t2 then tl = tl .. string.format(" · 2pc = %+.1f%%", entry.t2) end
-		if entry.tc == 4 then tl = tl .. " · |cff4fbf7aэта часть закроет 4pc|r" elseif entry.tc == 2 then tl = tl .. " · закроет 2pc" end
+		if entry.tp then tl = tl .. string.format(" - надето %d/5", entry.tp) end
+		if entry.t4 then tl = tl .. string.format(" - 4pc = %+.1f%%", entry.t4) end
+		if entry.t2 then tl = tl .. string.format(" - 2pc = %+.1f%%", entry.t2) end
+		if entry.tc == 4 then tl = tl .. " - |cff4fbf7aэта часть закроет 4pc|r" elseif entry.tc == 2 then tl = tl .. " - закроет 2pc" end
 		tinsert(lines, tl)
 	end
 	if entry.k == 1 then tinsert(lines, "Тир-токен: содержит BiS-предмет для этого персонажа") end

@@ -57,7 +57,7 @@ function VF.SetCell(rowFrame, frame, data, cols, row, realrow, column, fShow, ta
 
 	local lines = ER:TooltipLines(entry, name, track)
 	if entry then
-		setTooltip(frame, "EasyRoster · " .. tostring(name), lines)
+		setTooltip(frame, "EasyRoster - " .. tostring(name), lines)
 	else
 		local age = ER:DataAgeDays()
 		setTooltip(frame, "EasyRoster", { lines[1], age and string.format("|cff9a9dabданные %.1f дн назад|r", age) or "|cffe06060данные не загружены|r" })
@@ -93,7 +93,7 @@ local function makeAltCell(key, label)
 				for _, tr in ipairs({ "Champion", "Hero", "Myth" }) do
 					if a.pt[tr] then tinsert(parts, string.format("%s %+.1f%%", tr, a.pt[tr])) end
 				end
-				if #parts > 0 then tinsert(lines, "По трекам: " .. tconcat(parts, " · ")) end
+				if #parts > 0 then tinsert(lines, "По трекам: " .. tconcat(parts, " - ")) end
 			end
 			-- остальные типы — коротко
 			for _, k in ipairs(ER.ALT_KINDS) do
@@ -102,9 +102,9 @@ local function makeAltCell(key, label)
 					if b then tinsert(lines, string.format("|cff9a9dab%s: %s%s|r", k.label, ER:ItemName(b.i), bp and string.format(" %+.1f%%", bp) or "")) end
 				end
 			end
-			setTooltip(frame, "EasyRoster · " .. tostring(name), lines)
+			setTooltip(frame, "EasyRoster - " .. tostring(name), lines)
 		else
-			setTooltip(frame, "EasyRoster · " .. tostring(name), { entry and ("Альтернативы (" .. label .. ") в BiS-листе нет — предмет для этого слота незаменим") or "|cff9a9dabНет в BiS-листе|r" })
+			setTooltip(frame, "EasyRoster - " .. tostring(name), { entry and ("Альтернативы (" .. label .. ") в BiS-листе нет — предмет для этого слота незаменим") or "|cff9a9dabНет в BiS-листе|r" })
 		end
 	end
 end
