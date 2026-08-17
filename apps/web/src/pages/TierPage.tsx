@@ -5,6 +5,7 @@ import { classColor, className, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { CharacterDrawer } from "../components/CharacterDrawer";
 import { ClassIcon } from "../components/ClassIcon";
+import { SimPanel } from "../components/SimPanel";
 
 const TIER_SLOT_ORDER = ["HEAD", "SHOULDER", "CHEST", "HANDS", "LEGS"];
 const SLOT_SHORT: Record<string, string> = { HEAD: "Гол", SHOULDER: "Плч", CHEST: "Грд", HANDS: "Кст", LEGS: "Ног" };
@@ -69,6 +70,7 @@ export function TierPage() {
         ⓘ приоритет = ценность 4pc × близость к 4pc · ⚗ = можно катализировать · наведите для подробностей
       </div>
 
+      <SimPanel />
       <div className="row" style={{ marginBottom: 8, gap: 6 }}>
         <span className="muted" style={{ fontSize: 12 }}>Сортировка:</span>
         {(["priority", "val4", "pieces", "name"] as const).map((k) => (
