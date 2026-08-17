@@ -56,6 +56,11 @@ export function ItemLink({
       rel="noreferrer"
       data-wowhead={wh}
       className="item-link"
+      onClick={(e) => {
+        // переход на Wowhead — только с Ctrl/Cmd/средней кнопкой; обычный клик не уводит со страницы (миссклики)
+        if (!(e.ctrlKey || e.metaKey || e.button === 1)) e.preventDefault();
+      }}
+      title="Ctrl+клик — открыть на Wowhead"
       style={{ color: muted ? "var(--text-muted)" : QUALITY_COLORS_NUM[quality ?? 4], display: "inline-flex", alignItems: "center", gap: 6, ...style }}
     >
       {icon !== undefined && (

@@ -117,7 +117,8 @@ tr.selected td { background: rgba(217,164,65,.08); }
 /* BiS-лист: две колонки на широких экранах */
 .bis-slot-grid { display: grid; grid-template-columns: 1fr; gap: 0 18px; }
 @media (min-width: 1000px) { .bis-slot-grid { grid-template-columns: 1fr 1fr; } }
-.item-link:hover { text-decoration: underline; }
+.item-link { cursor: default; }
+.item-link:hover { text-decoration: none; filter: brightness(1.15); }
 /* тултип Wowhead поверх выезжающей карточки */
 .wowhead-tooltip { z-index: 10000 !important; }
 
