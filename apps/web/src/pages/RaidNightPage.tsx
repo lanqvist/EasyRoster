@@ -153,50 +153,11 @@ export function RaidNightPage() {
               {sel.length === 0 ? (
                 <div className="muted">Никому из ростера не в BiS.</div>
               ) : (
-                <table className="zebra">
-                  <thead>
-                    <tr>
-                      <th>Кому</th>
-                      <th>Слот</th>
-                      <th className="num">#</th>
-                      <th>Статус</th>
-                      <th className="num" title="% сима для выбранной сложности">Апгрейд</th>
-                      <th title="Лучшая фармабельная альтернатива (M+/крафт): её % и источник; название — при наведении">Альт.</th>
-                      <th className="num" title="Незаменимость: апгрейд минус фармабельная альтернатива">▲ Gap</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sel.map((w) => {
-                      const st = OBTAINED_STYLE[w.obtained];
-                      return (
-                        <tr key={w.characterId + w.slot} className={focus?.characterId === w.characterId && focus.slot === w.slot ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setFocus({ characterId: w.characterId, slot: w.slot })}>
-                          <td>
-                            <span style={{ color: classColor(w.classId), fontWeight: 600 }}>{w.name}</span>
-                            <span className="muted"> · {specName(w.specId)}</span>
-                          </td>
-                          <td className="muted">{SLOT_NAMES_RU[w.slot] ?? w.slot}</td>
-                          <td className="num">{w.rank}</td>
-                          <td style={{ color: st.color }} title={w.obtainedDetail ?? ""}>{st.label}{w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}</td>
-                          <td className="num" style={{ color: w.upgradePct != null && w.upgradePct > 0 ? "var(--ok)" : undefined }}>
-                            {w.upgradePct != null ? `${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}
-                            {w.simTrack && <span className="muted" style={{ fontSize: 11 }}> {TRACK_NAMES_RU[w.simTrack] ?? w.simTrack}</span>}
-                          </td>
-                          <td className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }} title={(() => { const a = w.alt?.farmable ?? w.alt?.best; return a ? `${a.name} (${KIND_LABEL[a.kind]}${a.sourceName ? ` · ${a.sourceName}` : ""})` : ""; })()}>
-                            {(() => {
-                              const a = w.alt?.farmable ?? w.alt?.best;
-                              if (!a) return "—";
-                              if (w.upgradePct == null) return `${KIND_LABEL[a.kind]} · #${w.rank}`;
-                              return `${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}% ${KIND_LABEL[a.kind]}`;
-                            })()}
-                          </td>
-                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }} title="Насколько лучше фармабельной альтернативы">
-                            {w.alt?.gap == null ? "" : w.alt.gap > 0.05 ? `▲${w.alt.gap.toFixed(1)}` : <span className="muted" style={{ fontWeight: 400 }}>заменим</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <div className="cand-list">
+                  {sel.map((w) => (
+                    <CandidateCard key={w.characterId + w.slot} w={w} active={focus?.characterId === w.characterId && focus.slot === w.slot} onClick={() => setFocus({ characterId: w.characterId, slot: w.slot })} />
+                  ))}
+                </div>
               )}
             </>
           ) : (
@@ -243,6 +204,50 @@ export function RaidNightPage() {
       </div>
 
 
+    </div>
+  );
+}
+
+
+/** Карточка претендента: полоса статуса слева, имя/спека, слот и место, крупный % сима, альтернатива, gap. */
+function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean; onClick: () => void }) {
+  const st = OBTAINED_STYLE[w.obtained];
+  const pct = w.upgradePct;
+  const a = w.alt?.farmable ?? w.alt?.best;
+  const gap = w.alt?.gap;
+  return (
+    <div className={`cand-card${active ? " active" : ""}`} onClick={onClick} style={{ borderLeftColor: st.color }}>
+      <div className="cand-main">
+        <div className="cand-name">
+          <span style={{ color: classColor(w.classId), fontWeight: 700 }}>{w.name}</span>
+          <span className="muted"> · {specName(w.specId)}</span>
+        </div>
+        <div className="cand-meta muted">
+          {SLOT_NAMES_RU[w.slot] ?? w.slot} · #{w.rank} в слоте · <span style={{ color: st.color }}>{st.label}</span>
+          {w.obtainedDetail ? ` — ${w.obtainedDetail}` : ""}
+          {w.equippedIlvl && !w.obtainedDetail ? ` · надето ${w.equippedIlvl}` : ""}
+        </div>
+        {a && (
+          <div className="cand-alt muted">
+            {pct == null
+              ? `альт. ${KIND_LABEL[a.kind]}: ${a.name}`
+              : `без рейда: ${a.name} (${KIND_LABEL[a.kind]}) ${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}%`}
+          </div>
+        )}
+      </div>
+      <div className="cand-pct">
+        <div className="cand-pct-value" style={{ color: pct == null ? "var(--text-muted)" : pct > 0.05 ? "var(--ok)" : pct < -0.05 ? "var(--bad)" : "var(--text-muted)" }}>
+          {pct != null ? `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%` : w.obtained === "yes" ? "есть" : "—"}
+        </div>
+        <div className="cand-pct-sub muted">
+          {pct != null && w.simTrack ? (TRACK_NAMES_RU[w.simTrack] ?? w.simTrack) : pct == null ? "нет сима" : ""}
+        </div>
+        {gap != null && pct != null && (
+          <div className="cand-gap" style={{ color: gap >= 2 ? "var(--ok)" : gap >= 0.8 ? "var(--warn)" : "var(--text-muted)" }} title="Незаменимость: насколько лучше фармабельной альтернативы">
+            {gap > 0.05 ? `▲${gap.toFixed(1)}` : "заменим"}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

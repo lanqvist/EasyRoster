@@ -161,3 +161,22 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
   .loot-grid.with-focus .loot-focus { grid-column: auto; position: sticky; top: 8px; }
 }
 .loot-page .sf-row { grid-template-columns: 16px minmax(160px, 1fr) minmax(90px, 0.6fr) 96px 64px 48px; }
+
+/* карточки претендентов */
+.cand-list { display: flex; flex-direction: column; gap: 6px; }
+.cand-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: 6px;
+  background: var(--bg-elev-2); padding: 8px 12px; cursor: pointer; transition: background .12s, border-color .12s;
+}
+.cand-card:hover { background: rgba(217,164,65,.08); }
+.cand-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
+.cand-card.active { border-left-width: 5px; }
+.cand-main { min-width: 0; }
+.cand-name { font-size: 15px; line-height: 1.2; }
+.cand-meta { font-size: 12px; margin-top: 2px; }
+.cand-alt { font-size: 12px; margin-top: 2px; }
+.cand-pct { text-align: right; flex: none; min-width: 84px; }
+.cand-pct-value { font-size: 20px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cand-pct-sub { font-size: 11px; }
+.cand-gap { font-size: 12px; font-weight: 600; margin-top: 2px; }
