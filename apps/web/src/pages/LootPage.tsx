@@ -19,6 +19,7 @@ import { useDifficulty } from "../lib/difficulty";
 import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { ItemIcon, ItemLink } from "../components/ItemLink";
+import { CharacterDrawer } from "../components/CharacterDrawer";
 import { useConfig } from "../lib/config-context";
 
 export function LootPage() {
@@ -34,6 +35,7 @@ export function LootPage() {
   const [filterSlot, setFilterSlot] = useState<string>("");
   const [search, setSearch] = useState("");
   const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
+  const [selChar, setSelChar] = useState<number | null>(null);
 
   const load = async () => {
     try {
@@ -190,7 +192,7 @@ export function LootPage() {
                   <h2 style={{ fontSize: 15, marginBottom: 8 }}>{enc.name}</h2>
                   <div className="cand-list">
                     {items.map((it) => (
-                      <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} wanters={wanters[it.id] ?? []} />
+                      <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} wanters={wanters[it.id] ?? []} onCharacter={setSelChar} />
                     ))}
                   </div>
                 </div>
@@ -199,12 +201,14 @@ export function LootPage() {
           )}
         </section>
       </div>
+      {selChar !== null && <CharacterDrawer id={selChar} onClose={() => setSelChar(null)} initialTab="bis" />}
     </div>
   );
 }
 
-function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wanters: ItemWanter[] }) {
+function ItemLine({ item, locale, wanters, onCharacter }: { item: ItemRow; locale: string; wanters: ItemWanter[]; onCharacter?: (id: number) => void }) {
   const ru = locale.startsWith("ru");
+  const [open, setOpen] = useState(false);
   const name = ru ? item.nameRu ?? item.name : item.name;
   const type =
     item.itemClass === 4
@@ -217,7 +221,7 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
   const classes = item.allowableClasses?.map((c) => className(c)).join(", ");
   const need = wanters.filter((w) => w.obtained !== "yes");
   return (
-    <div className="item-card" style={{ cursor: "default" }}>
+    <div className={`item-card${open ? " active" : ""}`} style={{ cursor: wanters.length > 0 ? "pointer" : "default", alignItems: "flex-start" }} onClick={() => wanters.length > 0 && setOpen((v) => !v)} title={wanters.length > 0 ? "Клик — показать всех претендентов" : undefined}>
       <ItemIcon itemId={item.id} icon={item.icon} size={36} />
       <div className="item-card-main">
         <ItemLink itemId={item.id} name={name} quality={item.quality} ru={ru} style={{ fontSize: 14, fontWeight: 600 }} />
@@ -229,11 +233,12 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
         </div>
         {wanters.length > 0 && (
           <div style={{ fontSize: 12, marginTop: 3, whiteSpace: "normal" }}>
-            {wanters.slice(0, 8).map((w) => (
+            {(open ? wanters : wanters.slice(0, 8)).map((w) => (
               <span
                 key={w.characterId + w.slot}
+                onClick={(e) => { e.stopPropagation(); onCharacter?.(w.characterId); }}
                 title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · ${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%${w.simTrack ? ` (${TRACK_NAMES_RU[w.simTrack] ?? w.simTrack})` : ""}` : ""}`}
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 8, whiteSpace: "nowrap" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 8, whiteSpace: "nowrap", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }}
               >
                 <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color }} />
                 <span style={{ color: classColor(w.classId) }}>{w.name}</span>
@@ -241,7 +246,7 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
                 {w.rank > 1 && <span className="muted">#{w.rank}</span>}
               </span>
             ))}
-            {wanters.length > 8 && <span className="muted">+{wanters.length - 8}</span>}
+            {!open && wanters.length > 8 && <span className="muted">+{wanters.length - 8} (клик по карточке — все)</span>}
           </div>
         )}
       </div>
