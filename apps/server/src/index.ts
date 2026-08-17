@@ -11,7 +11,7 @@ import { bisRoutes } from "./routes/bis.js";
 import { wowRoutes } from "./routes/wow.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
-const VERSION = "0.4.4";
+const VERSION = "0.4.5";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
