@@ -34,7 +34,7 @@ function Row({ e, ru, highlight, index }: { e: BisEntry; ru: boolean; highlight?
   const dt = e.dropTrack;
   const st = OBTAINED_STYLE[e.obtained];
   return (
-    <div className="sf-row" style={highlight ? { background: "rgba(217,164,65,.14)", borderRadius: 4 } : undefined}>
+    <div className={`sf-row sf-card${highlight ? " active" : ""}`} style={{ borderLeftColor: highlight ? "var(--accent)" : st.color }}>
       <div className="muted num" style={{ fontSize: 12 }}>{index != null ? index : ""}</div>
       <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} size={24} style={{ fontSize: 14, maxWidth: "100%" }} />

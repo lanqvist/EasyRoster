@@ -118,30 +118,44 @@ export function RaidNightPage() {
       <div className={`loot-grid${focus ? " with-focus" : ""}`}>
         <div className="card" style={{ padding: "8px 12px" }}>
           <h2 style={{ fontSize: 16 }}>{enc?.name ?? "—"}</h2>
-          <table className="zebra">
-            <tbody>
-              {items.map(({ it, w }) => {
-                const need = w.filter((x) => x.obtained !== "yes");
-                return (
-                  <tr key={it.id} className={selectedItem?.id === it.id ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(it)}>
-                    <td>
-                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} size={28} style={{ fontSize: 14 }} />
-                      <div className="muted" style={{ fontSize: 12, marginLeft: 34 }}>{it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}</div>
-                    </td>
-                    <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+          <div className="cand-list">
+            {items.map(({ it, w }) => {
+              const need = w.filter((x) => x.obtained !== "yes");
+              const best = w[0];
+              const bestPct = best?.upgradePct ?? null;
+              const wanters3 = w.slice(0, 3);
+              return (
+                <div key={it.id} className={`item-card${selectedItem?.id === it.id ? " active" : ""}`} onClick={() => setSelectedItem(it)}>
+                  <div className="item-card-main">
+                    <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} size={32} style={{ fontSize: 14, fontWeight: 600 }} />
+                    <div className="muted item-card-meta">
+                      {it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}
+                      {wanters3.length > 0 && (
+                        <>
+                          {" · "}
+                          {wanters3.map((x, i) => (
+                            <span key={x.characterId + x.slot}>
+                              {i > 0 ? ", " : ""}
+                              <span style={{ color: classColor(x.classId) }}>{x.name}</span>
+                            </span>
+                          ))}
+                          {w.length > 3 ? ` +${w.length - 3}` : ""}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="item-card-side">
+                    <div className="num" style={{ fontSize: 15, fontWeight: 700 }}>
                       <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
-                      <span className="muted"> / {w.length}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {items.length === 0 && (
-                <tr>
-                  <td className="muted">{enc ? "Нет предметов, нужных ростеру (или BiS ещё не посчитан)" : "Выберите босса"}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                      <span className="muted" style={{ fontWeight: 400 }}> / {w.length}</span>
+                    </div>
+                    <div className="muted" style={{ fontSize: 11 }}>{bestPct != null ? `макс. ${bestPct > 0 ? "+" : ""}${bestPct.toFixed(1)}%` : "нужно"}</div>
+                  </div>
+                </div>
+              );
+            })}
+            {items.length === 0 && <div className="muted">{enc ? "Нет предметов, нужных ростеру (или BiS ещё не посчитан)" : "Выберите босса"}</div>}
+          </div>
         </div>
 
         <div className="card" style={{ padding: "8px 12px" }}>

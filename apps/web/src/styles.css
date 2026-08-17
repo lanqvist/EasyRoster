@@ -180,3 +180,18 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 .cand-pct-value { font-size: 20px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .cand-pct-sub { font-size: 11px; }
 .cand-gap { font-size: 12px; font-weight: 600; margin-top: 2px; }
+
+/* карточки предметов босса */
+.item-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev-2);
+  padding: 8px 12px; cursor: pointer; transition: background .12s, border-color .12s;
+}
+.item-card:hover { background: rgba(217,164,65,.08); }
+.item-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
+.item-card-main { min-width: 0; }
+.item-card-meta { font-size: 12px; margin-top: 2px; margin-left: 38px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-card-side { text-align: right; flex: none; }
+/* строки мини-карточки как карточки */
+.sf-card { border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; background: var(--bg-elev-2); margin-bottom: 4px; padding: 6px 8px; }
+.sf-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
