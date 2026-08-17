@@ -158,7 +158,9 @@ export interface BisTeamRow {
   coverage: BisCharacterView["coverage"] | null;
   perSlot: Record<string, ObtainedStatus | "none">;
   /** лучший кандидат слота: % сима (для выбранной сложности) и название — для тепловой карты */
-  perSlotBest: Record<string, { pct: number | null; name: string; obtained: ObtainedStatus } | null>;
+  perSlotBest: Record<string, { pct: number | null; name: string; obtained: ObtainedStatus; kind?: SourceKind } | null>;
+  /** потенциал апгрейда (только при персональном симе): сумма лучших положительных % по слотам, разбивка по источнику лучшего предмета */
+  potential: { total: number; raid: number; mplus: number; slotsRaid: number; slotsMplus: number; slots: number } | null;
   hasSim: boolean;
   simAt: number | null;
   role: "TANK" | "HEALER" | "DAMAGER" | null;

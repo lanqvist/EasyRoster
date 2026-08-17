@@ -12,6 +12,7 @@ export function SyncBar({ onFinished }: Props) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [wasRunning, setWasRunning] = useState(false);
+  const [menu, setMenu] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -51,16 +52,23 @@ export function SyncBar({ onFinished }: Props) {
   return (
     <div className="card" style={{ padding: "12px 16px" }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <div className="row">
-          <button className="primary" disabled={running} onClick={() => run(api.syncAll)}>
-            {running ? "Синхронизация…" : "Обновить всё"}
+        <div className="row" style={{ gap: 0, position: "relative" }}>
+          <button className="primary" disabled={running} onClick={() => run(api.syncAll)} title="Ростер гильдии по Blizzard API + профили рейдеров (только изменившиеся, If-Modified-Since). Это же делает автосинк.">
+            {running ? "Синхронизация…" : "Обновить"}
           </button>
-          <button disabled={running} onClick={() => run(api.syncGuild)}>
-            Только ростер гильдии
-          </button>
-          <button disabled={running} onClick={() => run(() => api.syncCharacters({ force: true }))}>
-            Персонажи (принудительно)
-          </button>
+          <button className="primary" disabled={running} style={{ padding: "6px 8px", borderLeft: "1px solid rgba(0,0,0,.25)" }} title="Другие режимы" onClick={() => setMenu((v) => !v)}>▾</button>
+          {menu && (
+            <div className="menu" onMouseLeave={() => setMenu(false)}>
+              <button onClick={() => { setMenu(false); void run(api.syncGuild); }}>
+                <b>Только ростер гильдии</b>
+                <span className="muted">кто в гильдии и с каким рангом; профили не трогаем — быстро, когда приняли/выгнали кого-то</span>
+              </button>
+              <button onClick={() => { setMenu(false); void run(() => api.syncCharacters({ force: true })); }}>
+                <b>Персонажи принудительно</b>
+                <span className="muted">перекачать профили всех рейдеров, игнорируя «не изменилось» — если экипировка в карточке явно устарела</span>
+              </button>
+            </div>
+          )}
         </div>
         <div className="muted" style={{ fontSize: 12, textAlign: "right" }}>
           {running && p && (

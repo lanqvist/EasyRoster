@@ -26,6 +26,23 @@ export function RosterPage() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [importingRanks, setImportingRanks] = useState(false);
+  const [rankMsg, setRankMsg] = useState<string | null>(null);
+  const { reload: reloadConfig } = useConfig();
+  const importRanks = async () => {
+    setImportingRanks(true);
+    setRankMsg(null);
+    try {
+      const r = await api.wowImportGuild();
+      setRankMsg(r.ranks ? `рангов ${r.ranks}, сопоставлено ${r.matched}` : "экспорт из игры не найден — нужен /reload с аддоном");
+      await reloadConfig();
+      await load();
+    } catch (e) {
+      setRankMsg((e as Error).message);
+    } finally {
+      setImportingRanks(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +128,14 @@ export function RosterPage() {
                 {th("class", "Класс / спека")}
                 {th("role", "Роль")}
                 {th("rank", "Ранг")}
+                {rows.some((r) => r.inRaidRoster && !config?.rankLabels[String(r.rank)]) && (
+                  <th style={{ fontWeight: 400 }}>
+                    <button style={{ padding: "1px 8px", fontSize: 11 }} disabled={importingRanks} title="Названия рангов и заметки Blizzard API не отдаёт — они экспортируются аддоном в SavedVariables при /reload в игре и импортируются сюда" onClick={importRanks}>
+                      {importingRanks ? "…" : "названия рангов — из игры"}
+                    </button>
+                    {rankMsg && <span className="muted" style={{ marginLeft: 6, fontSize: 11 }}>{rankMsg}</span>}
+                  </th>
+                )}
                 {th("ilvl", "ilvl", "num")}
                 {th("login", "Был в игре")}
                 <th>Профиль</th>
@@ -148,6 +173,14 @@ export function RosterPage() {
                         title={r.rosterOverride === "exclude" ? "Исключён вручную — вернуть" : r.rosterOverride === "include" ? "Добавлен вручную — убрать" : r.inRaidRoster ? "Убрать из рейдового ростера" : "Добавить в рейдовый ростер вручную"}
                         onClick={async () => {
                           const next: "exclude" | "include" | null = r.inRaidRoster ? (r.isRaider ? "exclude" : null) : r.isRaider ? null : "include";
+                          const q = r.inRaidRoster
+                            ? `Убрать ${r.name} из рейдового ростера?
+
+Персонаж пропадёт из BiS-сводки, автосима, «Распределения» и из db.lua для аддона (после следующего синка в игру).`
+                            : `Добавить ${r.name} в рейдовый ростер вручную?
+
+По нему начнут считаться BiS и сим, он попадёт в db.lua для аддона.`;
+                          if (!window.confirm(q)) return;
                           await api.characterSettings(r.id, { rosterOverride: next });
                           await load();
                         }}

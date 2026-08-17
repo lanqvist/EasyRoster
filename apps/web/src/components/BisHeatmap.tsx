@@ -5,19 +5,20 @@ import { OBTAINED_STYLE } from "./BisSlotList";
 import { ClassIcon } from "./ClassIcon";
 import { SimNowButton } from "./SimNowButton";
 
-type SortKey = "name" | "pct" | "ilvl" | "role" | "sim";
+type SortKey = "potential" | "name" | "pct" | "ilvl" | "role" | "sim";
 
 /** Сводка BiS по статику: карточки персонажей с полосой статусов слотов; раскрытие — детали по слотам. */
 export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (characterId: number) => void }) {
   const [onlySim, setOnlySim] = useState(false);
   const [role, setRole] = useState<"" | "TANK" | "HEALER" | "DAMAGER">("");
-  const [sort, setSort] = useState<SortKey>("pct");
+  const [sort, setSort] = useState<SortKey>("potential");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<Record<number, boolean>>({});
 
   const rows = useMemo(() => {
     let r = team.filter((x) => (!onlySim || x.hasSim) && (!role || x.role === role) && (!search || x.name.toLowerCase().includes(search.toLowerCase())));
     const cmp: Record<SortKey, (a: BisTeamRow, b: BisTeamRow) => number> = {
+      potential: (a, b) => (b.potential?.total ?? -1) - (a.potential?.total ?? -1) || (a.coverage?.pct ?? -1) - (b.coverage?.pct ?? -1) || a.name.localeCompare(b.name, "ru"),
       name: (a, b) => a.name.localeCompare(b.name, "ru"),
       pct: (a, b) => (a.coverage?.pct ?? -1) - (b.coverage?.pct ?? -1) || a.name.localeCompare(b.name, "ru"),
       ilvl: (a, b) => (b.ilvl ?? 0) - (a.ilvl ?? 0),
@@ -29,6 +30,10 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
 
   const slots = BIS_SLOT_ORDER.filter((s) => team.some((r) => r.perSlot[s]));
   const withSim = team.filter((t) => t.hasSim).length;
+  const maxPot = Math.max(1, ...team.map((t) => t.potential?.total ?? 0));
+  const teamPot = team.filter((t) => t.potential);
+  const sumRaid = teamPot.reduce((a, t) => a + (t.potential?.raid ?? 0), 0);
+  const sumM = teamPot.reduce((a, t) => a + (t.potential?.mplus ?? 0), 0);
   const sortBtn = (k: SortKey, label: string) => (
     <button key={k} className={sort === k ? "primary" : undefined} style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setSort(k)}>{label}</button>
   );
@@ -49,8 +54,11 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
             <input type="checkbox" checked={onlySim} onChange={(e) => setOnlySim(e.target.checked)} /> только с симом ({withSim}/{team.length})
           </label>
           <span className="muted" style={{ fontSize: 12 }}>сортировка:</span>
-          {sortBtn("pct", "BiS %")}{sortBtn("ilvl", "ilvl")}{sortBtn("role", "роль")}{sortBtn("sim", "сим")}{sortBtn("name", "имя")}
+          {sortBtn("potential", "потенциал")}{sortBtn("pct", "BiS %")}{sortBtn("ilvl", "ilvl")}{sortBtn("role", "роль")}{sortBtn("sim", "сим")}{sortBtn("name", "имя")}
         </div>
+      </div>
+      <div className="muted" style={{ fontSize: 12, marginBottom: 8 }} title="Потенциал = сумма лучших положительных % сима по слотам (на выбранной сложности): сколько всего DPS/итог можно добрать. Разбивка — по источнику лучшего предмета слота: рейд (в т.ч. катализатор) / M+ (в т.ч. тайник). BiS % = слотов, закрытых предметом на макс. треке.">
+        ⓘ <b>потенциал</b> — сколько % ещё можно добрать (сумма лучших апгрейдов по слотам){teamPot.length ? <> · по статику: из рейда {sumRaid.toFixed(0)} %, из M+ {sumM.toFixed(0)} %</> : null} · <b>BiS %</b> — слотов на макс. треке (на старте сезона у всех ≈0)
       </div>
       {rows.length === 0 ? (
         <div className="placeholder">Никого не найдено по фильтрам.</div>
@@ -89,9 +97,22 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
                     })}
                   </div>
                   <div className="bis-card-pct" onClick={(e) => e.stopPropagation()}>
-                    <div className="num" style={{ fontSize: 22, fontWeight: 700, color: cov && cov.pct >= 50 ? "var(--ok)" : cov && cov.pct > 0 ? "var(--warn)" : "var(--text-muted)" }} title="Слотов BiS на макс. треке / всего">
-                      {cov ? `${cov.pct}%` : "—"}
-                    </div>
+                    {r.potential ? (
+                      <div title={`потенциал апгрейда: +${r.potential.total.toFixed(1)}% в ${r.potential.slots} слотах · из рейда +${r.potential.raid.toFixed(1)}% (${r.potential.slotsRaid} сл.) · из M+ +${r.potential.mplus.toFixed(1)}% (${r.potential.slotsMplus} сл.) · BiS ${cov?.pct ?? 0}%`}>
+                        <div className="num" style={{ fontSize: 22, fontWeight: 700, color: r.potential.total >= 10 ? "var(--ok)" : r.potential.total >= 3 ? "var(--warn)" : "var(--text-muted)" }}>
+                          +{r.potential.total.toFixed(1)}%
+                        </div>
+                        <div className="pot-bar" title="доля: рейд / M+">
+                          <span style={{ width: `${(r.potential.raid / maxPot) * 100}%`, background: "var(--accent)" }} />
+                          <span style={{ width: `${(r.potential.mplus / maxPot) * 100}%`, background: "var(--warn)" }} />
+                        </div>
+                        <div className="muted num" style={{ fontSize: 10 }}>рейд {r.potential.raid.toFixed(1)} · M+ {r.potential.mplus.toFixed(1)} · BiS {cov?.pct ?? 0}%</div>
+                      </div>
+                    ) : (
+                      <div className="num" style={{ fontSize: 22, fontWeight: 700, color: cov && cov.pct >= 50 ? "var(--ok)" : cov && cov.pct > 0 ? "var(--warn)" : "var(--text-muted)" }} title="Слотов BiS на макс. треке / всего (сима нет — потенциал не считается)">
+                        {cov ? `${cov.pct}%` : "—"}
+                      </div>
+                    )}
                     <div className="row" style={{ gap: 4, justifyContent: "flex-end" }}>
                       <button style={{ padding: "1px 8px", fontSize: 11 }} onClick={() => onSelect(r.characterId)}>карточка</button>
                       <SimNowButton characterId={r.characterId} small />

@@ -311,6 +311,25 @@ export class BisService {
       const view = this.characterBis(c, undefined, { difficulty });
       const perSlot: Record<string, ObtainedStatus | "none"> = {};
       const perSlotBest: BisTeamRow["perSlotBest"] = {};
+      // потенциал апгрейда: сумма лучших положительных % по слотам (только по симу), с разбивкой по источнику лучшего предмета
+      let potential: BisTeamRow["potential"] = null;
+      if (view?.personalSim) {
+        potential = { total: 0, raid: 0, mplus: 0, slotsRaid: 0, slotsMplus: 0, slots: 0 };
+        for (const s of view.slots) {
+          const cands = s.entries.filter((e) => e.obtained !== "yes" && e.simSelected && e.simSelected.pct > 0.05);
+          if (!cands.length) continue;
+          const top = cands.reduce((x, y) => (y.simSelected!.pct > x.simSelected!.pct ? y : x));
+          const isRaid = top.sourceKind === "raid" || top.sourceKind === "catalyst" || top.sourceKind === "world";
+          const isM = top.sourceKind === "mplus" || top.sourceKind === "vault";
+          potential.total += top.simSelected!.pct;
+          potential.slots++;
+          if (isRaid) { potential.raid += top.simSelected!.pct; potential.slotsRaid++; }
+          if (isM) { potential.mplus += top.simSelected!.pct; potential.slotsMplus++; }
+        }
+        potential.total = Math.round(potential.total * 10) / 10;
+        potential.raid = Math.round(potential.raid * 10) / 10;
+        potential.mplus = Math.round(potential.mplus * 10) / 10;
+      }
       if (view) {
         for (const s of view.slots) {
           const need = s.slot === "FINGER" || s.slot === "TRINKET" ? 2 : 1;
@@ -323,7 +342,7 @@ export class BisService {
           const order: ObtainedStatus[] = ["yes", "lower", "catalyst", "no"];
           perSlot[s.slot] = best.map((b) => b.obtained).sort((a, b) => order.indexOf(b) - order.indexOf(a))[0]!;
           const top = best.find((b) => b.obtained !== "yes") ?? best[0]!;
-          perSlotBest[s.slot] = { pct: top.simSelected?.pct ?? null, name: top.itemNameRu ?? top.itemName, obtained: top.obtained };
+          perSlotBest[s.slot] = { pct: top.simSelected?.pct ?? null, name: top.itemNameRu ?? top.itemName, obtained: top.obtained, kind: top.sourceKind };
         }
       }
       rows.push({
@@ -334,6 +353,7 @@ export class BisService {
         specId: c.activeSpecId,
         ilvl: c.ilvlEquipped,
         coverage: view?.coverage ?? null,
+        potential,
         perSlot,
         perSlotBest,
         hasSim: !!view?.personalSim,
