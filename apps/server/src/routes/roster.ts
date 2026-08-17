@@ -29,7 +29,7 @@ export async function rosterRoutes(app: FastifyInstance, ctx: AppContext): Promi
   /** Ручные настройки персонажа: рейдовая спека (null = как в API), таланты (пусто = по источнику из настроек). */
   app.put("/api/characters/:id/settings", async (req, reply) => {
     const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);
-    const body = z.object({ raidSpecId: z.number().int().nullable().optional(), talentsOverride: z.string().nullable().optional() }).parse(req.body ?? {});
+    const body = z.object({ raidSpecId: z.number().int().nullable().optional(), talentsOverride: z.string().nullable().optional(), rosterOverride: z.enum(["exclude", "include"]).nullable().optional() }).parse(req.body ?? {});
     if (!ctx.sync.repo.get(id)) {
       reply.code(404);
       return { error: "Персонаж не найден" };

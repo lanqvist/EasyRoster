@@ -41,7 +41,7 @@ export const api = {
     request<RealmOption[]>("/api/blizzard/realms", { method: "POST", body: JSON.stringify(body) }),
   characters: (all = false) => request<CharacterRow[]>(`/api/characters${all ? "?all=1" : ""}`),
   character: (id: number) => request<CharacterDetail>(`/api/characters/${id}`),
-  characterSettings: (id: number, body: { raidSpecId?: number | null; talentsOverride?: string | null }) =>
+  characterSettings: (id: number, body: { raidSpecId?: number | null; talentsOverride?: string | null; rosterOverride?: "exclude" | "include" | null }) =>
     request<CharacterRow>(`/api/characters/${id}/settings`, { method: "PUT", body: JSON.stringify(body) }),
   syncStatus: () => request<SyncStatus>("/api/sync/status"),
   syncGuild: () => request<unknown>("/api/sync/guild", { method: "POST" }),

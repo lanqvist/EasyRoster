@@ -66,7 +66,7 @@ export function RosterPage() {
   );
 
   const stats = useMemo(() => {
-    const raiders = rows.filter((r) => r.isRaider);
+    const raiders = rows.filter((r) => r.inRaidRoster);
     const withIlvl = raiders.filter((r) => r.ilvlEquipped);
     const avg = withIlvl.length ? withIlvl.reduce((s, r) => s + (r.ilvlEquipped ?? 0), 0) / withIlvl.length : 0;
     const roles = { TANK: 0, HEALER: 0, DAMAGER: 0 };
@@ -113,6 +113,7 @@ export function RosterPage() {
                 {th("ilvl", "ilvl", "num")}
                 {th("login", "Был в игре")}
                 <th>Профиль</th>
+                <th title="Участие в рейдовом ростере (BiS, сим, экспорт в аддон)">В рейде</th>
               </tr>
             </thead>
             <tbody>
@@ -120,7 +121,7 @@ export function RosterPage() {
                 const role = roleOf(r.activeSpecId);
                 const st = STATUS_RU[r.profileStatus];
                 return (
-                  <tr key={r.id} className={selected === r.id ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setSelected(r.id)}>
+                  <tr key={r.id} className={selected === r.id ? "selected" : undefined} style={{ cursor: "pointer", opacity: r.inRaidRoster ? 1 : 0.55 }} onClick={() => setSelected(r.id)}>
                     <td>
                       <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                       <span className="muted"> — {r.realmName || r.realmSlug}</span>
@@ -139,6 +140,19 @@ export function RosterPage() {
                     <td className="muted">{relTime(r.lastLoginMs)}</td>
                     <td style={{ color: st.color }} title={r.profileMessage ?? undefined}>
                       {st.text}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <button
+                        style={{ padding: "1px 8px", fontSize: 11, color: r.inRaidRoster ? "var(--ok)" : "var(--text-muted)" }}
+                        title={r.rosterOverride === "exclude" ? "Исключён вручную — вернуть" : r.rosterOverride === "include" ? "Добавлен вручную — убрать" : r.inRaidRoster ? "Убрать из рейдового ростера" : "Добавить в рейдовый ростер вручную"}
+                        onClick={async () => {
+                          const next: "exclude" | "include" | null = r.inRaidRoster ? (r.isRaider ? "exclude" : null) : r.isRaider ? null : "include";
+                          await api.characterSettings(r.id, { rosterOverride: next });
+                          await load();
+                        }}
+                      >
+                        {r.inRaidRoster ? "да" : "нет"}{r.rosterOverride ? " ✎" : ""}
+                      </button>
                     </td>
                   </tr>
                 );

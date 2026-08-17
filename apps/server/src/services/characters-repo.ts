@@ -67,14 +67,14 @@ export class CharactersRepo {
 
   listRaiders(): CharacterRow[] {
     return this.db.conn
-      .prepare("SELECT * FROM characters WHERE in_guild = 1 AND is_raider = 1 ORDER BY rank, name")
+      .prepare("SELECT * FROM characters WHERE in_guild = 1 AND ((is_raider = 1 AND (roster_override IS NULL OR roster_override <> 'exclude')) OR roster_override = 'include') ORDER BY rank, name")
       .all()
       .map(mapCharacter);
   }
 
   list(opts: { onlyRaiders: boolean }): CharacterRow[] {
     const sql = opts.onlyRaiders
-      ? "SELECT * FROM characters WHERE in_guild = 1 AND is_raider = 1 ORDER BY rank, name"
+      ? "SELECT * FROM characters WHERE in_guild = 1 AND ((is_raider = 1 AND (roster_override IS NULL OR roster_override <> 'exclude')) OR roster_override = 'include') ORDER BY rank, name"
       : "SELECT * FROM characters WHERE in_guild = 1 ORDER BY rank, name";
     return this.db.conn.prepare(sql).all().map(mapCharacter);
   }
@@ -144,7 +144,8 @@ export class CharactersRepo {
   }
 
   /** Ручные настройки персонажа: рейдовая спека и таланты. */
-  setOverrides(id: number, o: { raidSpecId?: number | null; talentsOverride?: string | null }): void {
+  setOverrides(id: number, o: { raidSpecId?: number | null; talentsOverride?: string | null; rosterOverride?: "exclude" | "include" | null }): void {
+    if (o.rosterOverride !== undefined) this.db.conn.prepare("UPDATE characters SET roster_override = ? WHERE id = ?").run(o.rosterOverride, id);
     if (o.raidSpecId !== undefined) this.db.conn.prepare("UPDATE characters SET raid_spec_id = ? WHERE id = ?").run(o.raidSpecId, id);
     if (o.talentsOverride !== undefined) this.db.conn.prepare("UPDATE characters SET talents_override = ? WHERE id = ?").run(o.talentsOverride && o.talentsOverride.trim() ? o.talentsOverride.trim() : null, id);
   }
@@ -171,6 +172,8 @@ function mapCharacter(r: any): CharacterRow {
     detectedSpecId: r.active_spec_id,
     raidSpecId: r.raid_spec_id ?? null,
     talentsOverride: r.talents_override ?? null,
+    rosterOverride: r.roster_override ?? null,
+    inRaidRoster: !!r.in_guild && ((!!r.is_raider && r.roster_override !== "exclude") || r.roster_override === "include"),
     ilvlEquipped: r.ilvl_equipped,
     ilvlAvg: r.ilvl_avg,
     lastLoginMs: r.last_login_ms,

@@ -41,6 +41,10 @@ export interface CharacterRow {
   raidSpecId: number | null;
   /** код талантов, заданный вручную (всегда побеждает) */
   talentsOverride: string | null;
+  /** ручное исключение/включение в рейдовый ростер */
+  rosterOverride: "exclude" | "include" | null;
+  /** итог: участвует в рейдовом ростере (ранг + ручные правки) */
+  inRaidRoster: boolean;
   ilvlEquipped: number | null;
   ilvlAvg: number | null;
   lastLoginMs: number | null;

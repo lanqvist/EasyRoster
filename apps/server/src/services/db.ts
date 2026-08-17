@@ -234,6 +234,10 @@ const MIGRATIONS: string[] = [
   ALTER TABLE instances ADD COLUMN name_ru TEXT;
   ALTER TABLE instances ADD COLUMN encounters_ru TEXT;   -- JSON {encounterId: nameRu}
   `,
+  // v10 — ручное включение/исключение из рейдового ростера
+  `
+  ALTER TABLE characters ADD COLUMN roster_override TEXT;   -- 'exclude' | 'include' | NULL
+  `,
 ];
 
 export class Db {
