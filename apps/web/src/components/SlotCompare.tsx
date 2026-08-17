@@ -25,7 +25,7 @@ function shortTrack(t: string | null | undefined): string {
 }
 
 /** Карточка кандидата (в стиле распределения лута). */
-function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; onPin?: (e: BisEntry) => void; onExclude?: (e: BisEntry) => void }) {
+function CandidateCard({ e, ru, onPin, onExclude, bySim }: { e: BisEntry; ru: boolean; onPin?: (e: BisEntry) => void; onExclude?: (e: BisEntry) => void; bySim: boolean }) {
   const st = OBTAINED_STYLE[e.obtained];
   const dt = e.dropTrack;
   const a = e.alternatives;
@@ -39,6 +39,7 @@ function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; 
         <div className="cand-name" style={{ fontSize: 14 }}>
           <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} quality={e.quality} bonusIds={e.bonusIds} ru={ru} style={{ fontWeight: 600 }} />
           {e.isTier && <span className="muted" style={{ fontSize: 11 }}> тир</span>}
+          {bySim && <span className="muted" style={{ fontSize: 11 }} title="место в BiS-листе по гайдам/логам (без учёта сима)"> · гайд #{e.rank}</span>}
         </div>
         <div className="cand-meta muted">
           {KIND_ICON[e.sourceKind]} {shortSource(e)}
@@ -57,9 +58,13 @@ function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; 
         ) : null}
       </div>
       <div className="cand-pct">
-        <div className="cand-pct-value" style={{ color: pctColor(pct), fontSize: 18 }} title={simTip}>
-          {pct != null ? pctText(pct) : <span className="muted" style={{ fontSize: 13, fontWeight: 400 }}>балл {e.score}</span>}
-        </div>
+        {pct != null ? (
+          <div className="cand-pct-value" style={{ color: pctColor(pct), fontSize: 18 }} title={simTip}>{pctText(pct)}</div>
+        ) : (
+          <div className="cand-pct-value" style={{ fontSize: 15, color: e.rank === 1 ? "var(--ok)" : "var(--text)" }} title={`место в BiS-листе слота по гайдам/логам · балл объединения ${e.score}${bySim ? " · сим этот предмет не считал" : ""}`}>
+            #{e.rank} <span className="muted" style={{ fontSize: 11, fontWeight: 400 }}>по гайду</span>
+          </div>
+        )}
         <div className="cand-pct-sub" style={{ color: st.color }} title={e.obtainedDetail ?? ""}>{st.label}</div>
         {(e.sourceKind === "raid" || e.sourceKind === "catalyst" || e.sourceKind === "world") && <div><TrackBreakdown byTrack={e.simByTrack} active={e.simSelected?.track} /></div>}
       </div>
@@ -99,7 +104,11 @@ export function SlotCompare({
         const equipSlots = SLOT_TO_EQUIP_SLOTS[slot] ?? [slot];
         const equipped = equipSlots.map((s) => eqBySlot.get(s)).filter((x): x is NonNullable<typeof x> => !!x);
         const view = bisBySlot.get(slot);
-        const entries = view?.entries ?? [];
+        // со свежим персональным симом — порядок по % на выбранной сложности; предметы, которых сим не считал (крафт и т.п.), после них по баллу
+        const bySim = !!bis?.personalSim && (view?.entries ?? []).some((e) => e.simSelected);
+        const entries = bySim
+          ? [...(view?.entries ?? [])].sort((a, b) => (b.simSelected?.pct ?? -1e9) - (a.simSelected?.pct ?? -1e9) || b.score - a.score)
+          : view?.entries ?? [];
         const open = !!expanded[slot];
         const shown = open ? entries : entries.slice(0, perSlot);
         const best = entries[0];
@@ -135,11 +144,11 @@ export function SlotCompare({
                 ))}
               </div>
               <div className="slot-cands">
-                <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>BiS-кандидаты · сим для выбранной сложности</div>
+                <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>{bySim ? "Кандидаты · по % сима на выбранной сложности" : "Кандидаты · по BiS-листу (гайды/логи)"}</div>
                 {entries.length === 0 && <div className="muted" style={{ fontSize: 13 }}>нет кандидатов</div>}
                 <div className="cand-list">
                   {shown.map((e) => (
-                    <CandidateCard key={e.itemId} e={e} ru={ru} onPin={onPin} onExclude={onExclude} />
+                    <CandidateCard key={e.itemId} e={e} ru={ru} onPin={onPin} onExclude={onExclude} bySim={bySim} />
                   ))}
                 </div>
                 {entries.length > perSlot && (

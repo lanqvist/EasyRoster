@@ -2,21 +2,32 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { RAID_DIFFICULTY_LABEL, RAID_DIFFICULTY_TRACK, TRACK_NAMES_RU, type RaidDifficulty } from "@easyroster/core";
 import { useConfig } from "./config-context";
 
-/** Выбранная сложность рейда для отображения треков/процентов (по умолчанию — из настроек, запоминается в localStorage). */
-const KEY = "easyroster.difficulty";
-const Ctx = createContext<{ difficulty: RaidDifficulty; setDifficulty: (d: RaidDifficulty) => void } | null>(null);
+/**
+ * Сложность рейда «сейчас» — одна на всё приложение: хранится в конфиге (`season.raidDifficulty`),
+ * тот же параметр использует экспорт db.lua и BiS-движок на сервере. Переключатель — в сайдбаре.
+ */
+const Ctx = createContext<{ difficulty: RaidDifficulty; setDifficulty: (d: RaidDifficulty) => void; saving: boolean } | null>(null);
+const LEGACY_KEY = "easyroster.difficulty";
 
 export function DifficultyProvider({ children }: { children: ReactNode }) {
-  const { config } = useConfig();
-  const [difficulty, setState] = useState<RaidDifficulty>(() => (localStorage.getItem(KEY) as RaidDifficulty | null) ?? "normal");
-  useEffect(() => {
-    if (!localStorage.getItem(KEY) && config?.season.raidDifficulty) setState(config.season.raidDifficulty);
-  }, [config?.season.raidDifficulty]);
+  const { config, save } = useConfig();
+  const [override, setOverride] = useState<RaidDifficulty | null>(null);
+  const [saving, setSaving] = useState(false);
+  const difficulty: RaidDifficulty = override ?? config?.season.raidDifficulty ?? "normal";
+  // старое значение из localStorage больше не используется — чтобы не расходилось с настройкой
+  useEffect(() => localStorage.removeItem(LEGACY_KEY), []);
   const setDifficulty = (d: RaidDifficulty) => {
-    localStorage.setItem(KEY, d);
-    setState(d);
+    setOverride(d);
+    setSaving(true);
+    // ConfigPatch = deepPartial, но season с default() не становится partial в типах — сервер принимает частичный объект
+    save({ season: { raidDifficulty: d } } as unknown as Parameters<typeof save>[0])
+      .catch(() => undefined)
+      .finally(() => {
+        setSaving(false);
+        setOverride(null);
+      });
   };
-  return <Ctx.Provider value={{ difficulty, setDifficulty }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ difficulty, setDifficulty, saving }}>{children}</Ctx.Provider>;
 }
 
 export function useDifficulty() {
@@ -25,13 +36,13 @@ export function useDifficulty() {
   return v;
 }
 
-/** Переключатель Normal / Heroic / Mythic. */
+/** Переключатель Normal / Heroic / Mythic (в сайдбаре — один на всё приложение). */
 export function DifficultySwitch({ compact = false }: { compact?: boolean }) {
-  const { difficulty, setDifficulty } = useDifficulty();
+  const { difficulty, setDifficulty, saving } = useDifficulty();
   return (
-    <label className="row" style={{ gap: 8, alignItems: "center" }} title="На какой сложности вы сейчас рейдите: определяет трек/ilvl выпадающих предметов и какой % сима показывать как основной. Разбивка по всем сложностям видна в карточках.">
-      <span style={{ fontSize: compact ? 12 : 13 }}>{compact ? "Сложность:" : "Сложность рейда сейчас:"}</span>
-      <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as RaidDifficulty)} style={{ fontWeight: 600 }}>
+    <label className={compact ? "row" : "diff-switch"} style={{ gap: 6, alignItems: "center" }} title="На какой сложности вы сейчас рейдите: определяет трек/ilvl выпадающих предметов и какой % сима показывать как основной — во всём приложении и в db.lua для аддона. Разбивка по всем сложностям видна в карточках.">
+      <span style={{ fontSize: 12 }}>{compact ? "Сложность:" : "Сложность рейда сейчас"}</span>
+      <select value={difficulty} disabled={saving} onChange={(e) => setDifficulty(e.target.value as RaidDifficulty)} style={{ fontWeight: 600, width: compact ? undefined : "100%" }}>
         {(["normal", "heroic", "mythic"] as RaidDifficulty[]).map((d) => (
           <option key={d} value={d}>
             {RAID_DIFFICULTY_LABEL[d]} → {TRACK_NAMES_RU[RAID_DIFFICULTY_TRACK[d]] ?? RAID_DIFFICULTY_TRACK[d]}

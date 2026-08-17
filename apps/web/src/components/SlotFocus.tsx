@@ -44,7 +44,7 @@ function Row({ e, ru, highlight, index }: { e: BisEntry; ru: boolean; highlight?
       <div className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={shortSource(e)}>{shortSource(e)}</div>
       <div className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{dt ? `${TRACK_NAMES_RU[dt.name] ?? dt.name} ${dt.ilvl ?? ""}` : ""}</div>
       <div className="num" style={{ fontSize: 14, fontWeight: 600, textAlign: "right", color: pctColor(e.simSelected?.pct) }} title={e.simByTrack ? Object.entries(e.simByTrack).map(([t, v]) => `${TRACK_NAMES_RU[t] ?? t}: ${pctText(v)}`).join("\n") : ""}>
-        {e.simSelected ? pctText(e.simSelected.pct) : <span className="muted" style={{ fontWeight: 400 }}>{e.score}</span>}
+        {e.simSelected ? pctText(e.simSelected.pct) : <span className="muted" style={{ fontWeight: 400 }} title={`место в BiS-листе по гайдам · балл ${e.score}`}>#{e.rank}</span>}
       </div>
       <div style={{ fontSize: 10, color: st.color, whiteSpace: "nowrap" }} title={e.obtainedDetail ?? ""}>{e.obtained === "no" ? "" : st.label}</div>
     </div>
@@ -71,7 +71,8 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
   const equipSlots = SLOT_TO_EQUIP_SLOTS[slot] ?? [slot];
   const equipped = detail.equipment.filter((e) => equipSlots.includes(e.slot));
   const view = bis?.slots.find((s) => s.slot === slot);
-  const entries = view?.entries ?? [];
+  const bySim = !!bis?.personalSim && (view?.entries ?? []).some((e) => e.simSelected);
+  const entries = bySim ? [...(view?.entries ?? [])].sort((a, b) => (b.simSelected?.pct ?? -1e9) - (a.simSelected?.pct ?? -1e9) || b.score - a.score) : view?.entries ?? [];
   const dropped = highlightItemId ? entries.find((e) => e.itemId === highlightItemId || e.originalItemId === highlightItemId) : undefined;
   const others = entries.filter((e) => e !== dropped);
   const better = dropped?.simSelected ? others.filter((o) => (o.simSelected?.pct ?? -Infinity) > dropped.simSelected!.pct) : others.filter((o) => dropped && o.rank < dropped.rank);

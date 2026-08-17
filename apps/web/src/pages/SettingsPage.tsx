@@ -32,7 +32,6 @@ export function SettingsPage() {
     tierSetName: config?.sim.tierSetName ?? "",
     talentsSource: config?.sim.talentsSource ?? "simc-profile",
   }));
-  const [raidDiff, setRaidDiff] = useState(config?.season.raidDifficulty ?? "normal");
   const [bnetId, setBnetId] = useState(config?.blizzard.clientId ?? "");
   const [bnetSecret, setBnetSecret] = useState("");
   const [wclId, setWclId] = useState(config?.warcraftLogs.clientId ?? "");
@@ -50,7 +49,6 @@ export function SettingsPage() {
         wowRetailPath: wowPath,
         sync: { intervalMinutes: interval, guidesRefreshDays: guidesDays, autoExportLua: autoExport },
         sim: sim as any,
-        season: { raidDifficulty: raidDiff } as any,
         blizzard: { clientId: bnetId, clientSecret: bnetSecret },
         warcraftLogs: { clientId: wclId, clientSecret: wclSecret },
       });
@@ -194,12 +192,8 @@ export function SettingsPage() {
             <span className="hint">итог = dps·w1 − dtps·w2 + hps·w3 (в %). Хилов SimC не считает.</span>
           </div>
           <div className="field">
-            <label>Сложность рейда по умолчанию (треки/% в BiS и db.lua)</label>
-            <select value={raidDiff} onChange={(e) => setRaidDiff(e.target.value as typeof raidDiff)}>
-              <option value="normal">Normal → Чемпион</option>
-              <option value="heroic">Heroic → Герой</option>
-              <option value="mythic">Mythic → Миф</option>
-            </select>
+            <label>Сложность рейда</label>
+            <span className="hint">переключатель «Сложность рейда сейчас» — в меню слева; действует на BiS, сим-% и db.lua</span>
           </div>
           <div className="field">
             <label>Таланты для сима</label>

@@ -177,11 +177,42 @@ export interface ItemWanter {
   obtained: ObtainedStatus;
   obtainedDetail: string | null;
   upgradePct: number | null; // из персонального сима, если есть (для выбранной сложности)
+  /** худшее надетое в слоте (то, что предмет заменит) */
   equippedIlvl: number | null;
+  equippedTrack?: string | null;
+  /** ilvl предмета на треке выбранной сложности / M+ */
+  dropIlvl?: number | null;
+  /** dropIlvl − equippedIlvl (для хилов и всех без сима) */
+  ilvlDelta?: number | null;
   simTrack?: string | null;
   simByTrack?: Record<string, number> | null;
   alt?: BisAlternatives | null;
   sourceKind?: SourceKind;
+}
+
+/**
+ * Сортировка «кому выгоднее»: сначала те, кому это апгрейд по симу (по %), затем без сима — по разнице ilvl и месту в листе;
+ * уже имеющие предмет — в конце. Не имеющие сима, но с положительной разницей ilvl, идут вперемешку с симом по грубой оценке (1 ilvl ≈ 0.4 %).
+ */
+export function compareWantersByBenefit(a: ItemWanter, b: ItemWanter): number {
+  const order: Record<ObtainedStatus, number> = { no: 0, catalyst: 0, lower: 0, yes: 1 };
+  if (order[a.obtained] !== order[b.obtained]) return order[a.obtained] - order[b.obtained];
+  return wanterBenefit(b) - wanterBenefit(a) || a.rank - b.rank || b.score - a.score;
+}
+
+/** Числовая оценка выгоды для сортировки/порогов: % сима, иначе грубая оценка по Δ ilvl. */
+export function wanterBenefit(w: ItemWanter): number {
+  if (w.upgradePct != null) return w.upgradePct;
+  if (w.ilvlDelta != null) return w.ilvlDelta * 0.4 - (w.rank - 1) * 0.3;
+  return -(w.rank - 1) * 0.3;
+}
+
+/** Порог, с которого предмет считается апгрейдом («нужно»): % сима или оценка по ilvl. */
+export const WANT_THRESHOLD_PCT = 0.3;
+export function wanterNeeds(w: ItemWanter): boolean {
+  if (w.obtained === "yes") return false;
+  if (w.upgradePct == null && w.ilvlDelta == null) return true; // нечем оценить — считаем, что нужно (по листу)
+  return wanterBenefit(w) >= WANT_THRESHOLD_PCT;
 }
 
 export interface TierRow {

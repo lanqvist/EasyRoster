@@ -4,6 +4,8 @@ import {
   SPEC_BY_ID,
   rclcKeyForExport,
   type BisCharacterView,
+  type BisEntry,
+  compareWantersByBenefit,
   type BisSource,
   type BisSourceStatus,
   type BisTeamRow,
@@ -342,45 +344,39 @@ export class BisService {
     return rows;
   }
 
+  /** Строка «кому нужен» из записи BiS: сим-%, разница ilvl к надетому (для хилов/без сима), альтернативы. */
+  private wanterOf(c: CharacterRow, view: BisCharacterView, s: BisCharacterView["slots"][number], e: BisEntry): ItemWanter {
+    const sim = e.sources.find((x) => isSimSource(x.source));
+    // для парных слотов сравниваем с худшим из надетых (его и заменит предмет)
+    const worst = s.equipped.length ? s.equipped.reduce((a, b) => ((b.ilvl ?? 0) < (a.ilvl ?? 0) ? b : a)) : null;
+    const eqIlvl = worst?.ilvl ?? null;
+    const dropIlvl = e.dropTrack?.ilvl ?? null;
+    return {
+      characterId: c.id,
+      name: c.name,
+      realmName: c.realmName,
+      classId: c.classId,
+      specId: view.specId,
+      slot: s.slot,
+      rank: e.rank,
+      score: e.score,
+      obtained: e.obtained,
+      obtainedDetail: e.obtainedDetail,
+      upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
+      equippedIlvl: eqIlvl,
+      equippedTrack: worst?.track ?? null,
+      dropIlvl,
+      ilvlDelta: dropIlvl != null && eqIlvl != null ? dropIlvl - eqIlvl : null,
+      simTrack: e.simSelected?.track ?? null,
+      simByTrack: e.simByTrack,
+      alt: e.alternatives,
+      sourceKind: e.sourceKind,
+    };
+  }
+
   /** Кому из ростера нужен предмет (учитывая тир-токены и катализатор). */
   wanters(itemId: number, difficulty?: RaidDifficulty): ItemWanter[] {
-    const item = this.staticData.item(itemId);
-    const targetIds = new Set<number>([itemId]);
-    if (item?.contains) for (const id of item.contains) targetIds.add(id);
-    const out: ItemWanter[] = [];
-    for (const c of this.chars.listRaiders()) {
-      const view = this.characterBis(c, undefined, { difficulty });
-      if (!view) continue;
-      for (const s of view.slots) {
-        for (const e of s.entries) {
-          if (!targetIds.has(e.itemId) && !(e.originalItemId && targetIds.has(e.originalItemId))) continue;
-          const eqIlvl = s.equipped.length ? Math.min(...s.equipped.map((x) => x.ilvl ?? 0)) : null;
-          const sim = e.sources.find((x) => isSimSource(x.source));
-          out.push({
-            characterId: c.id,
-            name: c.name,
-            realmName: c.realmName,
-            classId: c.classId,
-            specId: view.specId,
-            slot: s.slot,
-            rank: e.rank,
-            score: e.score,
-            obtained: e.obtained,
-            obtainedDetail: e.obtainedDetail,
-            upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
-            equippedIlvl: eqIlvl,
-            simTrack: e.simSelected?.track ?? null,
-            simByTrack: e.simByTrack,
-            alt: e.alternatives,
-            sourceKind: e.sourceKind,
-          });
-        }
-      }
-    }
-    // сортировка: не получено → ниже трек → есть; затем ранг, затем балл
-    const order: Record<ObtainedStatus, number> = { no: 0, catalyst: 1, lower: 2, yes: 3 };
-    out.sort((a, b) => order[a.obtained] - order[b.obtained] || a.rank - b.rank || b.score - a.score);
-    return out;
+    return this.wantersForItems([itemId], difficulty)[itemId] ?? [];
   }
 
   /** Карта itemId → wanters для набора предметов (страница лута). */
@@ -401,18 +397,11 @@ export class BisService {
         for (const s of view.slots) {
           for (const e of s.entries) {
             if (!targetIds.has(e.itemId) && !(e.originalItemId && targetIds.has(e.originalItemId))) continue;
-            const sim = e.sources.find((x) => isSimSource(x.source));
-            list.push({
-              characterId: c.id, name: c.name, realmName: c.realmName, classId: c.classId, specId: view.specId, slot: s.slot,
-              rank: e.rank, score: e.score, obtained: e.obtained, obtainedDetail: e.obtainedDetail, upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
-              equippedIlvl: s.equipped.length ? Math.min(...s.equipped.map((x) => x.ilvl ?? 0)) : null,
-              simTrack: e.simSelected?.track ?? null, simByTrack: e.simByTrack, alt: e.alternatives, sourceKind: e.sourceKind,
-            });
+            list.push(this.wanterOf(c, view, s, e));
           }
         }
       }
-      const order: Record<ObtainedStatus, number> = { no: 0, catalyst: 1, lower: 2, yes: 3 };
-      list.sort((a, b) => order[a.obtained] - order[b.obtained] || a.rank - b.rank || b.score - a.score);
+      list.sort(compareWantersByBenefit);
       if (list.length) result[itemId] = list;
     }
     return result;

@@ -1,16 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TRACK_NAMES_RU, SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
+import { RAID_DIFFICULTY_LABEL, TRACK_NAMES_RU, SLOT_NAMES_RU, compareWantersByBenefit, wanterBenefit, wanterNeeds, type InstanceRow, type ItemRow, type ItemWanter, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
 import { api } from "../lib/api";
-import { DifficultySwitch, TrackBreakdown, useDifficulty } from "../lib/difficulty";
+import { TrackBreakdown, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
 import { ItemIcon, ItemLink } from "../components/ItemLink";
 import { ClassIcon } from "../components/ClassIcon";
 import { useConfig } from "../lib/config-context";
-import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
+import { classColor, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
 import { SlotFocus } from "../components/SlotFocus";
 import { AltKinds } from "../components/AltKinds";
+
+type SortMode = "benefit" | "gap" | "rank";
+const SORT_LABEL: Record<SortMode, string> = { benefit: "по выгоде", gap: "по незаменимости", rank: "по месту в листе" };
+const SORT_TITLE: Record<SortMode, string> = {
+  benefit: "% сима на выбранной сложности; без сима — по разнице ilvl и месту в листе; уже имеющие — в конце",
+  gap: "▲ насколько выпавшее лучше того, что персонаж может нафармить сам (M+/крафт)",
+  rank: "место предмета в BiS-листе слота персонажа (как в гайдах)",
+};
+const isYes = (w: ItemWanter) => (w.obtained === "yes" ? 1 : 0);
+const SORTERS: Record<SortMode, (a: ItemWanter, b: ItemWanter) => number> = {
+  benefit: compareWantersByBenefit,
+  gap: (a, b) => isYes(a) - isYes(b) || (b.alt?.gap ?? -1e9) - (a.alt?.gap ?? -1e9) || compareWantersByBenefit(a, b),
+  rank: (a, b) => isYes(a) - isYes(b) || a.rank - b.rank || compareWantersByBenefit(a, b),
+};
 
 /**
  * Лут-ночь: выбираем рейд → босса → предмет; справа — кому и насколько это нужно
@@ -28,6 +42,8 @@ export function RaidNightPage() {
   const [focus, setFocus] = useState<{ characterId: number; slot: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [onlyNeeded, setOnlyNeeded] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>(() => (localStorage.getItem("easyroster.raidSort") as SortMode | null) ?? "benefit");
+  useEffect(() => localStorage.setItem("easyroster.raidSort", sortMode), [sortMode]);
 
   useEffect(() => {
     api
@@ -71,25 +87,27 @@ export function RaidNightPage() {
   }, [selectedItem]);
   const items = useMemo(() => {
     if (!enc) return [];
+    const needN = (w: ItemWanter[]) => w.filter(wanterNeeds).length;
+    const maxB = (w: ItemWanter[]) => Math.max(-Infinity, ...w.map(wanterBenefit));
     return enc.items
       .map((it) => ({ it, w: wanters[it.id] ?? [] }))
-      .filter((x) => !onlyNeeded || x.w.length > 0)
-      .sort((a, b) => b.w.filter((w) => w.obtained !== "yes").length - a.w.filter((w) => w.obtained !== "yes").length);
+      .filter((x) => !onlyNeeded || needN(x.w) > 0)
+      .sort((a, b) => needN(b.w) - needN(a.w) || maxB(b.w) - maxB(a.w));
   }, [enc, wanters, onlyNeeded]);
 
   const itemsRef = useRef<ItemRow[]>([]);
   itemsRef.current = items.map((x) => x.it);
   const ru = (config?.locale ?? "ru_RU").startsWith("ru");
-  const sel = selectedItem ? wanters[selectedItem.id] ?? [] : [];
+  const sel = useMemo(() => {
+    const list = selectedItem ? [...(wanters[selectedItem.id] ?? [])] : [];
+    return list.sort(SORTERS[sortMode]);
+  }, [selectedItem, wanters, sortMode]);
 
   return (
     <div className="loot-page">
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <div>
-          <h1 style={{ marginBottom: 0 }}>Распределение лута</h1>
-          <div className="muted" style={{ fontSize: 12 }}>босс → предмет → кому он нужнее и почему (то же, что совет видит в колонке BiS RCLootCouncil)</div>
-        </div>
-        <DifficultySwitch />
+      <div>
+        <h1 style={{ marginBottom: 0 }}>Распределение лута</h1>
+        <div className="muted" style={{ fontSize: 12 }}>босс → предмет → кому он нужнее и почему (то же, что совет видит в колонке BiS RCLootCouncil) · сложность — {RAID_DIFFICULTY_LABEL[difficulty]} (переключатель в меню слева)</div>
       </div>
       <WowIntegrationCard compact />
       {err && <div className="alert bad">{err}</div>}
@@ -111,8 +129,13 @@ export function RaidNightPage() {
           ))}
         </select>
         <label className="row" style={{ gap: 6 }}>
-          <input type="checkbox" checked={onlyNeeded} onChange={(e) => setOnlyNeeded(e.target.checked)} /> только нужные кому-то
+          <input type="checkbox" checked={onlyNeeded} onChange={(e) => setOnlyNeeded(e.target.checked)} /> только апгрейды
         </label>
+        <span className="muted" style={{ fontSize: 12, marginLeft: "auto" }}>претенденты:</span>
+        {(Object.keys(SORT_LABEL) as SortMode[]).map((k) => (
+          <button key={k} className={sortMode === k ? "primary" : undefined} style={{ padding: "2px 10px", fontSize: 12 }} title={SORT_TITLE[k]} onClick={() => setSortMode(k)}>{SORT_LABEL[k]}</button>
+        ))}
+        <span className="muted" style={{ fontSize: 11 }} title="стрелки ↑/↓ переключают предметы">↑↓</span>
       </div>
 
       <div className={`loot-grid${focus ? " with-focus" : ""}`}>
@@ -120,10 +143,10 @@ export function RaidNightPage() {
           <h2 style={{ fontSize: 16 }}>{enc?.name ?? "—"}</h2>
           <div className="cand-list">
             {items.map(({ it, w }) => {
-              const need = w.filter((x) => x.obtained !== "yes");
-              const best = w[0];
-              const bestPct = best?.upgradePct ?? null;
-              const wanters3 = w.slice(0, 3);
+              const need = w.filter(wanterNeeds);
+              const withSim = w.filter((x) => x.upgradePct != null);
+              const bestPct = withSim.length ? Math.max(...withSim.map((x) => x.upgradePct!)) : null;
+              const wanters3 = need.slice(0, 3);
               return (
                 <div key={it.id} className={`item-card${selectedItem?.id === it.id ? " active" : ""}`} onClick={() => setSelectedItem(it)}>
                   <ItemIcon itemId={it.id} icon={it.icon} size={36} />
@@ -140,17 +163,19 @@ export function RaidNightPage() {
                               <span style={{ color: classColor(x.classId) }}>{x.name}</span>
                             </span>
                           ))}
-                          {w.length > 3 ? ` +${w.length - 3}` : ""}
+                          {need.length > 3 ? ` +${need.length - 3}` : ""}
                         </>
                       )}
                     </div>
                   </div>
                   <div className="item-card-side">
-                    <div className="num" style={{ fontSize: 15, fontWeight: 700 }}>
-                      <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
+                    <div className="num" style={{ fontSize: 15, fontWeight: 700 }} title={`апгрейд для ${need.length} из ${w.length} претендентов в BiS-листах`}>
+                      <span style={{ color: need.length ? "var(--ok)" : "var(--text-muted)" }}>{need.length}</span>
                       <span className="muted" style={{ fontWeight: 400 }}> / {w.length}</span>
                     </div>
-                    <div className="muted" style={{ fontSize: 11 }}>{bestPct != null ? `макс. ${bestPct > 0 ? "+" : ""}${bestPct.toFixed(1)}%` : "нужно"}</div>
+                    <div className="muted" style={{ fontSize: 11 }}>
+                      {bestPct != null ? (bestPct > 0.05 ? `макс. +${bestPct.toFixed(1)}%` : "никому не апгрейд") : need.length ? "апгрейд" : "не нужен"}
+                    </div>
                   </div>
                 </div>
               );
@@ -202,6 +227,7 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
   const pct = w.upgradePct;
   const a = w.alt?.farmable ?? w.alt?.best;
   const gap = w.alt?.gap;
+  const d = w.ilvlDelta ?? null;
   return (
     <div className={`cand-card${active ? " active" : ""}`} onClick={onClick} style={{ borderLeftColor: st.color }}>
       <div className="cand-main">
@@ -225,11 +251,21 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
         ) : null}
       </div>
       <div className="cand-pct">
-        <div className="cand-pct-value" style={{ color: pct == null ? "var(--text-muted)" : pct > 0.05 ? "var(--ok)" : pct < -0.05 ? "var(--bad)" : "var(--text-muted)" }}>
-          {pct != null ? `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%` : w.obtained === "yes" ? "есть" : "—"}
-        </div>
+        {pct != null ? (
+          <div className="cand-pct-value" style={{ color: pct > 0.05 ? "var(--ok)" : pct < -0.05 ? "var(--bad)" : "var(--text-muted)" }}>
+            {`${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`}
+          </div>
+        ) : w.obtained === "yes" ? (
+          <div className="cand-pct-value" style={{ color: "var(--text-muted)" }}>есть</div>
+        ) : d != null ? (
+          <div className="cand-pct-value" style={{ color: d > 0 ? "var(--ok)" : d < 0 ? "var(--bad)" : "var(--text-muted)" }} title="разница ilvl предмета на выбранной сложности и худшего надетого в слоте (сима нет — оценка по ilvl)">
+            {`${d > 0 ? "+" : ""}${d} ilvl`}
+          </div>
+        ) : (
+          <div className="cand-pct-value" style={{ color: "var(--text-muted)" }}>—</div>
+        )}
         <div className="cand-pct-sub muted">
-          {pct != null && w.simTrack ? (TRACK_NAMES_RU[w.simTrack] ?? w.simTrack) : pct == null ? "нет сима" : ""}
+          {pct != null && w.simTrack ? (TRACK_NAMES_RU[w.simTrack] ?? w.simTrack) : pct == null ? (d != null ? "по ilvl · нет сима" : "нет сима") : ""}
         </div>
         {w.simByTrack && <TrackBreakdown byTrack={w.simByTrack} active={w.simTrack} />}
         {gap != null && pct != null && (

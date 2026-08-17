@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { BIS_SLOT_ORDER, SLOT_NAMES_RU, type BisTeamRow } from "@easyroster/core";
 import { classColor, relTime, ROLE_RU, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "./BisSlotList";
-import { DifficultySwitch } from "../lib/difficulty";
 import { ClassIcon } from "./ClassIcon";
 import { SimNowButton } from "./SimNowButton";
 
@@ -52,7 +51,6 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
           <span className="muted" style={{ fontSize: 12 }}>сортировка:</span>
           {sortBtn("pct", "BiS %")}{sortBtn("ilvl", "ilvl")}{sortBtn("role", "роль")}{sortBtn("sim", "сим")}{sortBtn("name", "имя")}
         </div>
-        <DifficultySwitch compact />
       </div>
       {rows.length === 0 ? (
         <div className="placeholder">Никого не найдено по фильтрам.</div>

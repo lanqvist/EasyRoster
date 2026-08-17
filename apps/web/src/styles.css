@@ -65,6 +65,9 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 }
 .nav a:hover { background: var(--bg-elev-2); text-decoration: none; }
 .nav a.active { background: var(--bg-elev-2); color: var(--accent); }
+.nav-group { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); padding: 10px 10px 2px; }
+.sidebar-diff { padding: 12px 8px 4px; border-top: 1px solid var(--border); margin-top: 8px; }
+.diff-switch { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-muted); }
 .sidebar .foot { margin-top: auto; font-size: 12px; color: var(--text-muted); padding: 0 8px; }
 .main { padding: 26px 32px; max-width: 1680px; min-width: 0; }
 .card { min-width: 0; overflow-x: auto; }

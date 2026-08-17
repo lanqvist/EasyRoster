@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { applyTheme, getTheme, type Theme } from "./lib/theme";
 import { ConfigProvider, useConfig } from "./lib/config-context";
-import { DifficultyProvider } from "./lib/difficulty";
+import { DifficultyProvider, DifficultySwitch } from "./lib/difficulty";
 import { SetupPage } from "./pages/SetupPage";
 import { RosterPage } from "./pages/RosterPage";
 import { LootPage } from "./pages/LootPage";
@@ -77,13 +77,19 @@ function Shell() {
           Easy<span>Roster</span>
         </div>
         <nav className="nav">
+          <div className="nav-group">Рейд</div>
+          <NavLink to="/raid-night">Распределение</NavLink>
+          <NavLink to="/loot">Лут-таблицы</NavLink>
+          <div className="nav-group">Подготовка</div>
           <NavLink to="/roster">Ростер</NavLink>
           <NavLink to="/bis">BiS</NavLink>
-          <NavLink to="/loot">Лут-таблицы</NavLink>
-          <NavLink to="/raid-night">Распределение</NavLink>
           <NavLink to="/tier">Тир-сет</NavLink>
+          <div className="nav-group" />
           <NavLink to="/settings">Настройки</NavLink>
         </nav>
+        <div className="sidebar-diff">
+          <DifficultySwitch />
+        </div>
         <div className="foot">
           {config?.guild.name} — {config?.guild.realmName} ({config?.region.toUpperCase()})
           <div>

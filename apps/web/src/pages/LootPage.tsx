@@ -7,6 +7,7 @@ import {
   WEAPON_SUBCLASS_NAMES_RU,
   iconUrl,
   itemUsableBySpec,
+  wanterNeeds,
   wowheadUrl,
   type InstanceRow,
   type ItemRow,
@@ -219,7 +220,7 @@ function ItemLine({ item, locale, wanters, onCharacter }: { item: ItemRow; local
           ? "Тир-токен"
           : "";
   const classes = item.allowableClasses?.map((c) => className(c)).join(", ");
-  const need = wanters.filter((w) => w.obtained !== "yes");
+  const need = wanters.filter(wanterNeeds);
   return (
     <div className={`item-card${open ? " active" : ""}`} style={{ cursor: wanters.length > 0 ? "pointer" : "default", alignItems: "flex-start" }} onClick={() => wanters.length > 0 && setOpen((v) => !v)} title={wanters.length > 0 ? "Клик — показать всех претендентов" : undefined}>
       <ItemIcon itemId={item.id} icon={item.icon} size={36} />
@@ -255,7 +256,7 @@ function ItemLine({ item, locale, wanters, onCharacter }: { item: ItemRow; local
           <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
           <span className="muted" style={{ fontWeight: 400 }}> / {wanters.length}</span>
         </div>
-        <div className="muted" style={{ fontSize: 11 }}>нужно</div>
+        <div className="muted" style={{ fontSize: 11 }}>{need.length ? "апгрейд" : "не нужен"}</div>
       </div>
     </div>
   );
