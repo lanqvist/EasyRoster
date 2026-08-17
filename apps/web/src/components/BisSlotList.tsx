@@ -1,6 +1,7 @@
 import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type BisCharacterView, type BisEntry, type ObtainedStatus } from "@easyroster/core";
 import { QUALITY_COLORS_NUM } from "../lib/format";
 import { AltLine, SourceChips } from "./SourceChips";
+import { ItemLink } from "./ItemLink";
 
 export const OBTAINED_STYLE: Record<ObtainedStatus, { color: string; label: string; bg: string }> = {
   yes: { color: "var(--ok)", label: "есть", bg: "rgba(79,191,122,.15)" },
@@ -45,9 +46,9 @@ export function BisSlotList({
 }) {
   const ru = locale.startsWith("ru");
   return (
-    <div>
+    <div className="bis-slot-grid">
       {view.slots.map((s) => (
-        <div key={s.slot} style={{ marginBottom: 10 }}>
+        <div key={s.slot} style={{ marginBottom: 10, breakInside: "avoid" }}>
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 2 }}>
             <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em" }}>{SLOT_NAMES_RU[s.slot] ?? s.slot}</div>
             <div className="muted" style={{ fontSize: 11 }}>
@@ -66,13 +67,8 @@ export function BisSlotList({
                 return (
                   <tr key={e.itemId} style={{ background: e.rank === 1 ? st.bg : undefined }}>
                     <td className="num muted" style={{ width: 22, padding: "3px 6px" }} title={`Балл объединения ${e.score} · ${[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}`}>{e.rank}</td>
-                    <td style={{ width: 26, padding: "3px 4px" }}>
-                      <img src={iconUrl(e.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
-                    </td>
                     <td>
-                      <a href={wowheadUrl(e.itemId, e.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[e.quality ?? 4] }}>
-                        {(ru && e.itemNameRu) || e.itemName}
-                      </a>
+                      <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} />
                       {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}
                       <div style={{ marginTop: 2 }}>
                         <SourceChips e={e} />

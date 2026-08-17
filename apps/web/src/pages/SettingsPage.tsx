@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConfig } from "../lib/config-context";
 import { RankPicker } from "../components/RankPicker";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
@@ -6,6 +6,8 @@ import { WowIntegrationCard } from "../components/WowIntegrationCard";
 export function SettingsPage() {
   const { config, save } = useConfig();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [tab, setTab] = useState<string>(() => localStorage.getItem("easyroster.settingsTab") ?? "guild");
+  useEffect(() => localStorage.setItem("easyroster.settingsTab", tab), [tab]);
   const [busy, setBusy] = useState(false);
 
   const [ranks, setRanks] = useState<number[]>(config?.raiderRanks ?? []);
@@ -64,12 +66,19 @@ export function SettingsPage() {
     await save({ setupComplete: false });
   };
 
+  const TABS: Array<[string, string]> = [["guild", "Гильдия и ранги"], ["keys", "Ключи API"], ["sim", "Автосим"], ["local", "Синхронизация"], ["wow", "Интеграция с WoW"]];
+  const show = (t: string): React.CSSProperties | undefined => (tab === t ? undefined : { display: "none" });
   return (
     <div>
       <h1>Настройки</h1>
+      <div className="row" style={{ marginBottom: 14, gap: 6 }}>
+        {TABS.map(([k, label]) => (
+          <button key={k} className={tab === k ? "primary" : undefined} onClick={() => setTab(k)}>{label}</button>
+        ))}
+      </div>
       {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}
 
-      <div className="card">
+      <div className="card" style={show("guild")}>
         <h2>Гильдия</h2>
         <p>
           <b>{config.guild.name}</b> — {config.guild.realmName} ({config.region.toUpperCase()}), slug{" "}
@@ -78,12 +87,12 @@ export function SettingsPage() {
         <button onClick={rerunSetup}>Пройти мастер заново</button>
       </div>
 
-      <div className="card">
+      <div className="card" style={show("guild")}>
         <h2>Ранги рейдеров</h2>
         <RankPicker value={ranks} onChange={setRanks} labels={labels} onLabelsChange={setLabels} />
       </div>
 
-      <div className="card">
+      <div className="card" style={show("keys")}>
         <h2>Ключи API</h2>
         <div className="grid-2">
           <div className="field">
@@ -121,7 +130,7 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" style={show("sim")}>
         <h2>Автосим SimulationCraft</h2>
         <div className="grid-2">
           <label className="row" style={{ gap: 6 }}>
@@ -209,7 +218,7 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" style={show("local")}>
         <h2>Локально</h2>
         <div className="grid-2">
           <div className="field">
@@ -233,11 +242,13 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <button className="primary" disabled={busy} onClick={submit}>
-        {busy ? "Сохраняю…" : "Сохранить"}
-      </button>
+      {tab !== "wow" && (
+        <button className="primary" disabled={busy} onClick={submit}>
+          {busy ? "Сохраняю…" : "Сохранить"}
+        </button>
+      )}
 
-      <div style={{ marginTop: 24 }}>
+      <div style={show("wow")}>
         <WowIntegrationCard />
       </div>
     </div>

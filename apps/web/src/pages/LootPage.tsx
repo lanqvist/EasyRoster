@@ -17,6 +17,7 @@ import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
+import { ItemLink } from "../components/ItemLink";
 import { useConfig } from "../lib/config-context";
 
 export function LootPage() {
@@ -217,13 +218,8 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
   const classes = item.allowableClasses?.map((c) => className(c)).join(", ");
   return (
     <tr>
-      <td style={{ width: 28, padding: "3px 6px" }}>
-        <img src={iconUrl(item.icon, "small")} width={22} height={22} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
-      </td>
       <td>
-        <a href={wowheadUrl(item.id, [], locale.startsWith("ru") ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[item.quality ?? 4] }}>
-          {name}
-        </a>
+        <ItemLink itemId={item.id} name={name} icon={item.icon} quality={item.quality} ru={locale.startsWith("ru")} size={22} />
         {item.nameRu && item.nameRu !== item.name && locale.startsWith("ru") && <span className="muted" style={{ fontSize: 12 }}> · {item.name}</span>}
       </td>
       <td className="muted">{item.slot ? SLOT_NAMES_RU[item.slot] : item.contains ? `Токен (${item.contains.length})` : ""}</td>

@@ -6,159 +6,153 @@ def edit(p, pairs):
         s=s.replace(a,b,1)
     open(p,'w',encoding='utf8').write(s)
 
-# ---------- 1. Wowhead tooltips: index.html + refresh hook
-edit('apps/web/index.html',[
- ('    <title>EasyRoster</title>','''    <title>EasyRoster</title>
-    <script>
-      // Тултипы Wowhead при наведении на ссылки wowhead.com/item=…
-      window.whTooltips = { colorLinks: false, iconizeLinks: false, renameLinks: false, iconSize: "small", hide: { droppedby: true, sellprice: true } };
-    </script>
-    <script src="https://wow.zamimg.com/js/tooltips.js" async></script>'''),
-])
-edit('apps/web/src/App.tsx',[
- ('function Shell() {','''/** Пере-инициализация тултипов Wowhead после любых изменений DOM (React рендерит ссылки динамически). */
-function useWowheadTooltips() {
-  useEffect(() => {
-    let timer: number | null = null;
-    const refresh = () => {
-      timer = null;
-      const wp = (window as unknown as { $WowheadPower?: { refreshLinks?: () => void } }).$WowheadPower;
-      wp?.refreshLinks?.();
-    };
-    const obs = new MutationObserver(() => {
-      if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(refresh, 250);
-    });
-    obs.observe(document.body, { childList: true, subtree: true });
-    return () => obs.disconnect();
-  }, []);
-}
-
-function Shell() {
-  useWowheadTooltips();'''),
- ('import { useState } from "react";','import { useEffect, useState } from "react";'),
-])
-
-# ---------- 2. WowIntegrationCard compact = одна строка статуса + кнопки
-edit('apps/web/src/components/WowIntegrationCard.tsx',[
- ('  return (\n    <div className="card">\n      {!compact && <h2>Интеграция с WoW</h2>}',
-  '''  if (compact) {
-    const dot = (ok: boolean | null, label: string, title?: string) => (
-      <span title={title} style={{ marginRight: 12, whiteSpace: "nowrap" }}>
-        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, marginRight: 5, background: ok == null ? "var(--text-muted)" : ok ? "var(--ok)" : "var(--bad)" }} />
-        {label}
-      </span>
-    );
-    return (
-      <div className="card" style={{ padding: "8px 12px", marginBottom: 12 }}>
-        <div className="row" style={{ justifyContent: "space-between", fontSize: 12 }}>
-          <div className="row" style={{ gap: 0 }}>
-            {dot(st.wowPathValid, "WoW", "Папка _retail_")}
-            {dot(st.rclcInstalled, "RCLootCouncil")}
-            {dot(st.addonInstalled ? st.addonVersion === st.addonSourceVersion : false, st.addonInstalled ? `аддон v${st.addonVersion}` : "аддон не установлен", st.addonInstalled && st.addonVersion !== st.addonSourceVersion ? `доступна ${st.addonSourceVersion}` : "")}
-            {dot(!!st.dataTimestamp, st.dataTimestamp ? `db.lua ${dataAge}` : "db.lua нет", st.dataTimestamp ? `персонажей ${st.dataCharacters}` : "")}
-            {dot(st.lootHistoryCount > 0, `история ${st.lootHistoryCount}`, st.lastHistoryImportAt ? `импорт ${relTime(st.lastHistoryImportAt)}` : "")}
-          </div>
-          <div className="row" style={{ gap: 6 }}>
-            <button className="primary" style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("export", async () => { const r = await api.wowExport(); return `db.lua записан: ${r.characters} перс. — в игре /reload`; })}>
-              {busy === "export" ? "…" : "Синк в игру"}
-            </button>
-            <button style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("hist", async () => { const r = await api.wowImportHistory(); return `История RCLC: новых ${r.added}`; })}>История</button>
-            <button style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("install", async () => { const r = await api.wowInstallAddon(); return `Аддон обновлён (${r.files} файлов) — /reload`; })} title="Установить/обновить аддон">Аддон</button>
-          </div>
-        </div>
-        {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`} style={{ marginBottom: 0 }}>{msg.text}</div>}
-      </div>
-    );
-  }
-  return (
-    <div className="card">
-      {!compact && <h2>Интеграция с WoW</h2>}'''),
-])
-
-# ---------- 3. BisSlotList: компактные строки (детали в title), убрать колонку источников
+# ---------- ItemLink everywhere
 edit('apps/web/src/components/BisSlotList.tsx',[
- ('''                    <td className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }} title={e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\\n")}>
-                      {[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}
-                      <span className="num"> · {e.score}</span>
-                      <SimBadge sources={e.sources} />
-                    </td>''',
-  '''                    <td className="num" style={{ fontSize: 12, whiteSpace: "nowrap", textAlign: "right" }} title={`Источники: ${[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")} · балл ${e.score}\\n${e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\\n")}`}>
-                      <SimBadge sources={e.sources} />
-                    </td>'''),
- ('''                    <td className="num muted" style={{ width: 22, padding: "3px 6px" }}>{e.rank}</td>''',
-  '''                    <td className="num muted" style={{ width: 22, padding: "3px 6px" }} title={`Балл объединения ${e.score} · ${[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}`}>{e.rank}</td>'''),
+ ('''                    <td style={{ width: 26, padding: "3px 4px" }}>
+                      <img src={iconUrl(e.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
+                    </td>
+                    <td>
+                      <a href={wowheadUrl(e.itemId, e.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[e.quality ?? 4] }}>
+                        {(ru && e.itemNameRu) || e.itemName}
+                      </a>
+                      {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}''',
+  '''                    <td>
+                      <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} />
+                      {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}'''),
+ ('import { AltLine, SourceChips } from "./SourceChips";','import { AltLine, SourceChips } from "./SourceChips";\nimport { ItemLink } from "./ItemLink";'),
 ])
-# SimBadge: короче — только выбранный/лучший трек в строке, остальное в title
-edit('apps/web/src/components/BisSlotList.tsx',[
- ('''  return (
-    <div style={{ color: best.pct > 0 ? "var(--ok)" : "var(--text-muted)", fontSize: 11 }} title={parts.map((p) => `${p.text} ${p.tip}`).join("\\n")}>
-      сим {parts.map((p) => p.text).join(" · ")}
-    </div>
-  );''','''  return (
-    <div style={{ color: best.pct > 0 ? "var(--ok)" : "var(--text-muted)", fontSize: 12, fontWeight: 600 }} title={"сим по трекам:\\n" + parts.map((p) => `${p.text} ${p.tip}`).join("\\n")}>
-      {best.text}
-      {parts.length > 1 && <span className="muted" style={{ fontWeight: 400 }}> · {parts.slice(1, 3).map((p) => p.text.split(" (")[0]).join(" · ")}</span>}
-    </div>
-  );'''),
-])
-# AltLine короче
-edit('apps/web/src/components/SourceChips.tsx',[
- ('''      альт: {f.name} ({KIND_LABEL[f.kind]}{f.sourceName ? ` · ${f.sourceName}` : ""}) {f.pct > 0 ? "+" : ""}
-      {f.pct.toFixed(1)}%
-      {a.gap != null && <span style={{ color: gapColor }}> · незаменимость ▲{a.gap.toFixed(1)}</span>}
-      {a.count > 0 && <span> · ≥95%: {a.count}</span>}''',
-  '''      альт. {KIND_LABEL[f.kind]}: {f.name}{f.sourceName ? ` (${f.sourceName})` : ""} {f.pct > 0 ? "+" : ""}{f.pct.toFixed(1)}%
-      {a.gap != null && a.gap > 0.05 && <span style={{ color: gapColor }}> · незаменимость ▲{a.gap.toFixed(1)}</span>}
-      {a.gap != null && a.gap <= 0.05 && <span> · заменим</span>}'''),
-])
+# equipped mini icons in slot header — leave.
 
-# ---------- 4. RaidNight: колонки Альтернатива/Gap компактнее
+edit('apps/web/src/components/CharacterDrawer.tsx',[
+ ('''                          {it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ verticalAlign: "middle", marginRight: 6, borderRadius: 3 }} />}
+                          {it ? (
+                            <a
+                              href={`https://www.wowhead.com/ru/item=${it.itemId}${it.bonusIds.length ? `?bonus=${it.bonusIds.join(":")}` : ""}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: QUALITY_COLORS[it.quality ?? ""] ?? "inherit" }}
+                              title={it.setName ? `Комплект: ${it.setName}` : undefined}
+                            >
+                              {it.itemName ?? `#${it.itemId}`}
+                            </a>
+                          ) : (''',
+  '''                          {it ? (
+                            <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} size={18} />
+                          ) : ('''),
+ ('''                    <td style={{ width: 24, padding: "2px 4px" }}>{it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />}</td>
+                    <td>
+                      <a href={wowheadUrl(r.itemId, r.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[it?.quality ?? 4] }}>
+                        {(ru && it?.nameRu) || it?.name || `#${r.itemId}`}
+                      </a>''',
+  '''                    <td>
+                      <ItemLink itemId={r.itemId} name={(ru && it?.nameRu) || it?.name || `#${r.itemId}`} icon={it?.icon} quality={it?.quality} bonusIds={r.bonusIds} ru={ru} size={18} />'''),
+ ('import { useConfig } from "../lib/config-context";','import { useConfig } from "../lib/config-context";\nimport { ItemLink } from "./ItemLink";\n\nconst QUALITY_NUM_BY_TYPE: Record<string, number> = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, ARTIFACT: 6, HEIRLOOM: 7 };'),
+ # width of drawer + link to full page
+ ('        style={{ width: 560, maxWidth: "100%", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}',
+  '        style={{ width: "min(1100px, 95vw)", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}'),
+])
+# sim results table: header cell for icon removed → adjust thead: find "<th></th>\n                <th>Предмет</th>" in SimResults
+s=open('apps/web/src/components/CharacterDrawer.tsx',encoding='utf8').read()
+s=s.replace('''                <th></th>
+                <th>Предмет</th>
+                <th>Слот</th>
+                <th>Трек</th>''','''                <th>Предмет</th>
+                <th>Слот</th>
+                <th>Трек</th>''',1)
+open('apps/web/src/components/CharacterDrawer.tsx','w',encoding='utf8').write(s)
+
 edit('apps/web/src/pages/RaidNightPage.tsx',[
- ('''                          <td className="muted" style={{ fontSize: 12 }}>
-                            {(() => {
-                              const a = w.alt?.farmable ?? w.alt?.best;
-                              if (!a) return "—";
-                              return `${a.name} (${KIND_LABEL[a.kind]}) ${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}%`;
-                            })()}
-                          </td>
-                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600 }}>
-                            {w.alt?.gap != null ? `▲${w.alt.gap.toFixed(1)}` : ""}
-                          </td>''',
-  '''                          <td className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }} title={(() => { const a = w.alt?.farmable ?? w.alt?.best; return a ? `${a.name} (${KIND_LABEL[a.kind]}${a.sourceName ? ` · ${a.sourceName}` : ""})` : ""; })()}>
-                            {(() => {
-                              const a = w.alt?.farmable ?? w.alt?.best;
-                              if (!a) return "—";
-                              return `${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}% ${KIND_LABEL[a.kind]}`;
-                            })()}
-                          </td>
-                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600, whiteSpace: "nowrap" }} title="Насколько лучше фармабельной альтернативы">
-                            {w.alt?.gap == null ? "" : w.alt.gap > 0.05 ? `▲${w.alt.gap.toFixed(1)}` : <span className="muted" style={{ fontWeight: 400 }}>заменим</span>}
-                          </td>'''),
- ('                      <th title="Лучшая фармабельная альтернатива (M+/крафт)">Альтернатива</th>','                      <th title="Лучшая фармабельная альтернатива (M+/крафт): её % и источник; название — при наведении">Альт.</th>'),
+ ('''                    <td style={{ width: 26, padding: "3px 4px" }}>
+                      <img src={iconUrl(it.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} />
+                    </td>
+                    <td>
+                      <span style={{ color: QUALITY_COLORS_NUM[it.quality ?? 4] }}>{(ru && it.nameRu) || it.name}</span>''',
+  '''                    <td>
+                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} />'''),
+ ('''                <img src={iconUrl(selectedItem.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 6 }} />
+                <a href={wowheadUrl(selectedItem.id, [], ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[selectedItem.quality ?? 4] }}>
+                  {(ru && selectedItem.nameRu) || selectedItem.name}
+                </a>''',
+  '''                <ItemLink itemId={selectedItem.id} name={(ru && selectedItem.nameRu) || selectedItem.name} icon={selectedItem.icon} quality={selectedItem.quality} ru={ru} />'''),
+ ('import { KIND_LABEL } from "../components/SourceChips";','import { KIND_LABEL } from "../components/SourceChips";\nimport { ItemLink } from "../components/ItemLink";'),
+])
+edit('apps/web/src/pages/LootPage.tsx',[
+ ('''      <td style={{ width: 28, padding: "3px 6px" }}>
+        <img src={iconUrl(item.icon, "small")} width={22} height={22} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
+      </td>
+      <td>
+        <a href={wowheadUrl(item.id, [], locale.startsWith("ru") ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[item.quality ?? 4] }}>
+          {name}
+        </a>''',
+  '''      <td>
+        <ItemLink itemId={item.id} name={name} icon={item.icon} quality={item.quality} ru={locale.startsWith("ru")} size={22} />'''),
+ ('import { OBTAINED_STYLE } from "../components/BisSlotList";','import { OBTAINED_STYLE } from "../components/BisSlotList";\nimport { ItemLink } from "../components/ItemLink";'),
 ])
 
-# ---------- 5. BisPage: пояснения → «?», таблица источников сворачиваемая
-edit('apps/web/src/pages/BisPage.tsx',[
- ('''          <div className="muted" style={{ fontSize: 12, maxWidth: 360 }}>
-            {status?.progress ? (''','''          <div className="muted" style={{ fontSize: 12, maxWidth: 360 }} title="Icy Veins — авторские BiS-списки (Overall / Raid / M+ / тир / тринкеты). WCL — популярность предметов у топ-парсов Mythic текущего рейда. Итог = взвешенная сумма; персональный сим (SimC/Droptimizer, если свежий) поднимает предметы по % апгрейда.">
-            {status?.progress ? ('''),
- ('''              <>
-                <div>Icy Veins — авторские BiS-списки (Overall / Raid / M+ / тир / тринкеты).</div>
-                <div>WCL — популярность предметов у топ-парсов Mythic текущего рейда{config?.warcraftLogs.hasSecret ? "" : " (нужны ключи в Настройках)"}.</div>
-                <div>Итог = взвешенная сумма; персональный Droptimizer (если свежий) поднимает предметы по % апгрейда.</div>
-              </>''','''              <span>ⓘ как считается{config?.warcraftLogs.hasSecret ? "" : " · WCL: нужны ключи в Настройках"}</span>'''),
+# ---------- BisSlotList: две колонки слотов на широком экране
+edit('apps/web/src/components/BisSlotList.tsx',[
+ ('        <div key={s.slot} style={{ marginBottom: 10 }}>','        <div key={s.slot} style={{ marginBottom: 10, breakInside: "avoid" }}>'),
 ])
+s=open('apps/web/src/components/BisSlotList.tsx',encoding='utf8').read()
+# оборачивающий контейнер: найдём return ( <div> {view.slots.map
+s=s.replace('''  return (
+    <div>
+      {view.slots.map((s) => (''','''  return (
+    <div className="bis-slot-grid">
+      {view.slots.map((s) => (''',1)
+open('apps/web/src/components/BisSlotList.tsx','w',encoding='utf8').write(s)
+css=open('apps/web/src/styles.css',encoding='utf8').read()
+css+='''
+/* BiS-лист: две колонки на широких экранах */
+.bis-slot-grid { display: grid; grid-template-columns: 1fr; gap: 0 18px; }
+@media (min-width: 1000px) { .bis-slot-grid { grid-template-columns: 1fr 1fr; } }
+.item-link:hover { text-decoration: underline; }
+/* тултип Wowhead поверх выезжающей карточки */
+.wowhead-tooltip { z-index: 10000 !important; }
+'''
+open('apps/web/src/styles.css','w',encoding='utf8').write(css)
 
-# ---------- 6. TierPage: пояснение → title
-edit('apps/web/src/pages/TierPage.tsx',[
- ('''      <div className="card" style={{ padding: "10px 14px" }}>
-        <div className="muted" style={{ fontSize: 12 }}>
-          Ценность 2pc/4pc — из автосима (принудительное включение/выключение сет-бонуса в текущем гире персонажа). Приоритет = 4pc × близость к 4pc
-          (1 часть → 1.0, 2 → 0.6, 3+ → 0.3; есть 4pc → 0). «⚗» — надет катализируемый предмет в тир-слоте (возможность закрыть часть). Хилы без сима — только прогресс.
-        </div>
-      </div>''','''      <div className="muted" style={{ fontSize: 12, marginBottom: 8 }} title="Ценность 2pc/4pc — из автосима (принудительное включение/выключение сет-бонуса в текущем гире). Приоритет = 4pc × близость к 4pc (1 часть → 1.0, 2 → 0.6, 3+ → 0.3; есть 4pc → 0). ⚗ — надет катализируемый предмет в тир-слоте. Хилы без сима — только прогресс.">
-        ⓘ приоритет = ценность 4pc × близость к 4pc · ⚗ = можно катализировать · наведите для подробностей
-      </div>'''),
+# ---------- Settings tabs
+edit('apps/web/src/pages/SettingsPage.tsx',[
+ ('  return (\n    <div>\n      <h1>Настройки</h1>\n      {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}\n',
+  '''  const TABS: Array<[string, string]> = [["guild", "Гильдия и ранги"], ["keys", "Ключи API"], ["sim", "Автосим"], ["local", "Синхронизация"], ["wow", "Интеграция с WoW"]];
+  const show = (t: string): React.CSSProperties | undefined => (tab === t ? undefined : { display: "none" });
+  return (
+    <div>
+      <h1>Настройки</h1>
+      <div className="row" style={{ marginBottom: 14, gap: 6 }}>
+        {TABS.map(([k, label]) => (
+          <button key={k} className={tab === k ? "primary" : undefined} onClick={() => setTab(k)}>{label}</button>
+        ))}
+      </div>
+      {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}
+'''),
 ])
+s=open('apps/web/src/pages/SettingsPage.tsx',encoding='utf8').read()
+s=s.replace('  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);','  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);\n  const [tab, setTab] = useState<string>(() => localStorage.getItem("easyroster.settingsTab") ?? "guild");\n  useEffect(() => localStorage.setItem("easyroster.settingsTab", tab), [tab]);',1)
+if 'useEffect' not in s.split('\n')[0]:
+    s=s.replace('import { useState } from "react";','import { useEffect, useState } from "react";',1)
+# привязка карточек к вкладкам по заголовкам
+def tag(s, h2, t):
+    i=s.index('<h2>'+h2+'</h2>')
+    j=s.rfind('<div className="card">',0,i)
+    return s[:j]+'<div className="card" style={show("'+t+'")}>'+s[j+len('<div className="card">'):]
+for h2,t in [('Гильдия','guild'),('Ранги рейдеров','guild'),('Ключи API','keys'),('Автосим SimulationCraft','sim'),('Локально','local')]:
+    s=tag(s,h2,t)
+s=s.replace('''      <button className="primary" disabled={busy} onClick={submit}>
+        {busy ? "Сохраняю…" : "Сохранить"}
+      </button>
+
+      <div style={{ marginTop: 24 }}>
+        <WowIntegrationCard />
+      </div>''','''      {tab !== "wow" && (
+        <button className="primary" disabled={busy} onClick={submit}>
+          {busy ? "Сохраняю…" : "Сохранить"}
+        </button>
+      )}
+
+      <div style={show("wow")}>
+        <WowIntegrationCard />
+      </div>''')
+open('apps/web/src/pages/SettingsPage.tsx','w',encoding='utf8').write(s)
 print("ok")

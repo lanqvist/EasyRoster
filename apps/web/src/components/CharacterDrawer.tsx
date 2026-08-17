@@ -4,6 +4,9 @@ import { BisSlotList, SOURCE_LABEL } from "./BisSlotList";
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, QUALITY_COLORS, QUALITY_COLORS_NUM, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
+import { ItemLink } from "./ItemLink";
+
+const QUALITY_NUM_BY_TYPE: Record<string, number> = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, ARTIFACT: 6, HEIRLOOM: 7 };
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 
 export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: number; onClose: () => void; initialTab?: "gear" | "bis" }) {
@@ -89,7 +92,7 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: 560, maxWidth: "100%", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}
+        style={{ width: "min(1100px, 95vw)", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}
       >
         {err && <div className="alert bad">{err}</div>}
         {!c ? (
@@ -175,17 +178,8 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
                       <tr key={slot}>
                         <td className="muted">{EQUIP_SLOT_NAMES_RU[slot]}</td>
                         <td>
-                          {it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ verticalAlign: "middle", marginRight: 6, borderRadius: 3 }} />}
                           {it ? (
-                            <a
-                              href={`https://www.wowhead.com/ru/item=${it.itemId}${it.bonusIds.length ? `?bonus=${it.bonusIds.join(":")}` : ""}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: QUALITY_COLORS[it.quality ?? ""] ?? "inherit" }}
-                              title={it.setName ? `Комплект: ${it.setName}` : undefined}
-                            >
-                              {it.itemName ?? `#${it.itemId}`}
-                            </a>
+                            <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} size={18} />
                           ) : (
                             <span className="muted">—</span>
                           )}
@@ -334,7 +328,6 @@ function SimResults({ characterId, locale, onChanged }: { characterId: number; l
           <table style={{ fontSize: 12 }}>
             <thead>
               <tr>
-                <th></th>
                 <th>Предмет</th>
                 <th>Слот</th>
                 <th>Трек</th>
@@ -353,11 +346,8 @@ function SimResults({ characterId, locale, onChanged }: { characterId: number; l
                 const col = (v: number | null | undefined, invert = false) => (v == null ? "inherit" : (invert ? -v : v) > 0.05 ? "var(--ok)" : (invert ? -v : v) < -0.05 ? "var(--bad)" : "var(--text-muted)");
                 return (
                   <tr key={r.id}>
-                    <td style={{ width: 24, padding: "2px 4px" }}>{it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />}</td>
                     <td>
-                      <a href={wowheadUrl(r.itemId, r.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[it?.quality ?? 4] }}>
-                        {(ru && it?.nameRu) || it?.name || `#${r.itemId}`}
-                      </a>
+                      <ItemLink itemId={r.itemId} name={(ru && it?.nameRu) || it?.name || `#${r.itemId}`} icon={it?.icon} quality={it?.quality} bonusIds={r.bonusIds} ru={ru} size={18} />
                       {m.tokenId ? <span className="muted"> · токен</span> : null}
                     </td>
                     <td className="muted">{SLOT_NAMES_RU[r.slot] ?? r.slot}</td>

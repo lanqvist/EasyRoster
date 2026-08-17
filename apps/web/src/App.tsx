@@ -30,9 +30,20 @@ function useWowheadTooltips() {
       const wp = (window as unknown as { $WowheadPower?: { refreshLinks?: () => void } }).$WowheadPower;
       wp?.refreshLinks?.();
     };
-    const obs = new MutationObserver(() => {
+    const obs = new MutationObserver((records) => {
+      // реагируем только на появление новых ссылок на предметы; DOM самого тултипа игнорируем
+      let relevant = false;
+      for (const r of records) {
+        if ((r.target as Element).closest?.(".wowhead-tooltip")) continue;
+        for (const n of r.addedNodes) {
+          if (!(n instanceof Element)) continue;
+          if (n.matches?.("a[data-wowhead]") || n.querySelector?.("a[data-wowhead]")) { relevant = true; break; }
+        }
+        if (relevant) break;
+      }
+      if (!relevant) return;
       if (timer) window.clearTimeout(timer);
-      timer = window.setTimeout(refresh, 250);
+      timer = window.setTimeout(refresh, 200);
     });
     obs.observe(document.body, { childList: true, subtree: true });
     return () => obs.disconnect();

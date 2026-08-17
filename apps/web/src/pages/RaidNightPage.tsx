@@ -3,6 +3,7 @@ import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, typ
 import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
+import { ItemLink } from "../components/ItemLink";
 import { useConfig } from "../lib/config-context";
 import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
@@ -103,11 +104,8 @@ export function RaidNightPage() {
                 const need = w.filter((x) => x.obtained !== "yes");
                 return (
                   <tr key={it.id} className={selectedItem?.id === it.id ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(it)}>
-                    <td style={{ width: 26, padding: "3px 4px" }}>
-                      <img src={iconUrl(it.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} />
-                    </td>
                     <td>
-                      <span style={{ color: QUALITY_COLORS_NUM[it.quality ?? 4] }}>{(ru && it.nameRu) || it.name}</span>
+                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} />
                       <div className="muted" style={{ fontSize: 11 }}>{it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}</div>
                     </td>
                     <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
@@ -130,10 +128,7 @@ export function RaidNightPage() {
           {selectedItem ? (
             <>
               <h2 style={{ fontSize: 14 }}>
-                <img src={iconUrl(selectedItem.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 6 }} />
-                <a href={wowheadUrl(selectedItem.id, [], ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[selectedItem.quality ?? 4] }}>
-                  {(ru && selectedItem.nameRu) || selectedItem.name}
-                </a>
+                <ItemLink itemId={selectedItem.id} name={(ru && selectedItem.nameRu) || selectedItem.name} icon={selectedItem.icon} quality={selectedItem.quality} ru={ru} />
               </h2>
               {sel.length === 0 ? (
                 <div className="muted">Никому из ростера не в BiS.</div>

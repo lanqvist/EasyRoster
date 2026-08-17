@@ -112,3 +112,10 @@ tr.selected td { background: rgba(217,164,65,.08); }
 .placeholder { color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius); padding: 30px; text-align: center; }
 
 .theme-toggle { margin-top: 8px; font-size: 12px; padding: 4px 8px; }
+
+/* BiS-лист: две колонки на широких экранах */
+.bis-slot-grid { display: grid; grid-template-columns: 1fr; gap: 0 18px; }
+@media (min-width: 1000px) { .bis-slot-grid { grid-template-columns: 1fr 1fr; } }
+.item-link:hover { text-decoration: underline; }
+/* тултип Wowhead поверх выезжающей карточки */
+.wowhead-tooltip { z-index: 10000 !important; }
