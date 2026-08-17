@@ -210,3 +210,17 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 .tier-card:hover { background: rgba(217,164,65,.08); }
 .tier-bar { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
 .tier-seg { display: inline-block; min-width: 34px; text-align: center; font-size: 10px; line-height: 16px; border-radius: 3px; color: #111; font-weight: 600; }
+
+/* тир-сет: ранжированный список */
+.tier-row {
+  display: grid; grid-template-columns: 28px minmax(180px, 1.2fr) auto minmax(220px, 1fr) 160px; gap: 14px; align-items: center;
+  border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: 6px; background: var(--bg-elev-2); padding: 8px 12px; cursor: pointer;
+}
+.tier-row:hover { background: rgba(217,164,65,.08); }
+.tier-rank { font-size: 14px; text-align: right; }
+.tier-who { min-width: 0; }
+.tier-vals { font-size: 13px; white-space: nowrap; }
+.tier-prio { text-align: right; }
+.tier-prio-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin-bottom: 3px; }
+.tier-prio-bar > div { height: 100%; background: var(--ok); border-radius: 3px; }
+@media (max-width: 1100px) { .tier-row { grid-template-columns: 28px 1fr auto; } .tier-vals, .tier-prio { grid-column: 2 / -1; text-align: left; } }

@@ -40,6 +40,20 @@ export function TierPage() {
   const max4 = Math.max(0.01, ...rows.map((r) => r.val4 ?? 0));
   const maxP = Math.max(0.01, ...rows.map((r) => r.priority ?? 0));
   const tok = data?.tokens.find((t) => t.tokenId === token) ?? null;
+  const slotSources = useMemo(() => {
+    const m = new Map<string, Map<number, { tokenId: number; name: string; encounterName: string }>>();
+    for (const r of data?.rows ?? []) for (const mt of r.missingTokens) {
+      let x = m.get(mt.slot);
+      if (!x) m.set(mt.slot, (x = new Map()));
+      for (const t of mt.tokens) x.set(t.tokenId, t);
+    }
+    // несколько токенов на босса (по группам брони) — в легенде показываем боссов без повторов
+    return TIER_SLOT_ORDER.filter((s) => m.has(s)).map((s) => {
+      const byEnc = new Map<string, { tokenId: number; name: string; encounterName: string }>();
+      for (const t of m.get(s)!.values()) if (!byEnc.has(t.encounterName)) byEnc.set(t.encounterName, t);
+      return { slot: s, tokens: [...byEnc.values()] };
+    });
+  }, [data]);
 
   const th = (key: typeof sort, label: string, title?: string) => (
     <th style={{ cursor: "pointer" }} title={title} onClick={() => setSort(key)}>
@@ -63,65 +77,57 @@ export function TierPage() {
           </button>
         ))}
       </div>
-      <div className="tier-grid">
-        {rows.map((r) => (
-          <div key={r.characterId} className="tier-card" style={{ borderLeftColor: r.pieces >= 4 ? "var(--ok)" : r.pieces >= 2 ? "var(--warn)" : "var(--bad)" }} onClick={() => setSel(r.characterId)}>
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 15 }}>
+      {slotSources.length > 0 && (
+        <div className="card" style={{ padding: "8px 12px", marginBottom: 10 }}>
+          <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Откуда падают части тира (одинаково для всех классов)</div>
+          <div className="row" style={{ gap: 14, fontSize: 13 }}>
+            {slotSources.map((x) => (
+              <span key={x.slot}>
+                <b>{SLOT_NAMES_RU[x.slot]}</b>:{" "}
+                {x.tokens.map((t, i) => (
+                  <a key={t.tokenId} href="#" onClick={(e) => { e.preventDefault(); setToken(t.tokenId); }} title={t.name}>
+                    {i ? " / " : ""}{t.encounterName}
+                  </a>
+                ))}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="cand-list">
+        {rows.map((r, i) => {
+          const prioW = maxP > 0 && r.priority != null ? Math.max(3, (r.priority / maxP) * 100) : 0;
+          return (
+            <div key={r.characterId} className="tier-row" style={{ borderLeftColor: r.pieces >= 4 ? "var(--ok)" : r.pieces >= 2 ? "var(--warn)" : "var(--bad)" }} onClick={() => setSel(r.characterId)}>
+              <div className="num muted tier-rank">{i + 1}</div>
+              <div className="tier-who">
+                <div style={{ fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   <ClassIcon classId={r.classId} size={18} /><span style={{ color: classColor(r.classId), fontWeight: 700 }}>{r.name}</span>
                   <span className="muted" style={{ fontSize: 12 }}> · {specName(r.specId)}</span>
                 </div>
-                <div className="tier-bar" title={`собрано ${r.pieces}/5${r.catalyzable.length ? ` · катализируемо: ${r.catalyzable.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}`}>
-                  {TIER_SLOT_ORDER.map((sl) => (
-                    <span
-                      key={sl}
-                      className="tier-seg"
-                      title={SLOT_NAMES_RU[sl]}
-                      style={{
-                        background: r.owned.includes(sl) ? "var(--ok)" : r.catalyzable.includes(sl) ? "#3fb8a8" : "rgba(224,96,96,.35)",
-                      }}
-                    >
-                      {SLOT_SHORT[sl]}
-                    </span>
-                  ))}
-                  <span className="num" style={{ marginLeft: 8, fontWeight: 700 }}>{r.pieces}/5</span>
-                  {r.catalyzable.length > 0 && <span style={{ color: "#3fb8a8", marginLeft: 6 }} title="можно катализировать">⚗{r.catalyzable.length}</span>}
-                </div>
+                <div className="muted" style={{ fontSize: 11 }}>{r.simAt ? `сим ${relTime(r.simAt)}` : r.val4 == null ? "нет сима" : ""}</div>
               </div>
-              <div style={{ textAlign: "right", flex: "none" }}>
-                <div className="num" style={{ fontSize: 20, fontWeight: 700, color: r.priority == null ? "var(--text-muted)" : r.priority > 0 ? "var(--ok)" : "var(--text-muted)" }} title="приоритет = ценность 4pc × близость к 4pc">
-                  {r.priority != null ? r.priority.toFixed(1) : "—"}
-                </div>
-                <div className="muted" style={{ fontSize: 11 }}>приоритет</div>
-              </div>
-            </div>
-            <div className="row" style={{ marginTop: 6, gap: 14, fontSize: 12 }}>
-              <span title="ценность бонусов из сима">
-                2pc <b className="num">{r.val2 != null ? `${r.val2 > 0 ? "+" : ""}${r.val2.toFixed(1)}%` : "—"}</b>
-                {" · "}4pc <b className="num" style={{ color: r.val4 != null && r.val4 > 0 ? "var(--ok)" : undefined }}>{r.val4 != null ? `${r.val4 > 0 ? "+" : ""}${r.val4.toFixed(1)}%` : "—"}</b>
-              </span>
-              <span className="muted">{r.pieces >= 4 ? "4pc есть" : `до 4pc: ${r.toFour} ч.`}</span>
-              <span className="muted" style={{ marginLeft: "auto" }}>{r.simAt ? `сим ${relTime(r.simAt)}` : r.val4 == null ? "нет сима" : ""}</span>
-            </div>
-            {r.pieces < 4 && (
-              <div className="muted" style={{ fontSize: 11, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {r.missingTokens.map((m) => (
-                  <span key={m.slot} style={{ marginRight: 8 }}>
-                    {SLOT_SHORT[m.slot]}:{" "}
-                    {m.tokens.length
-                      ? m.tokens.map((t, i) => (
-                          <a key={t.tokenId} href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToken(t.tokenId); }} title={t.name}>
-                            {i ? "/" : ""}{t.encounterName}
-                          </a>
-                        ))
-                      : "?"}
+              <div className="tier-bar" title={`собрано ${r.pieces}/5${r.catalyzable.length ? ` · катализируемо: ${r.catalyzable.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}${r.missing.length ? ` · нужны: ${r.missing.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}`}>
+                {TIER_SLOT_ORDER.map((sl) => (
+                  <span key={sl} className="tier-seg" title={SLOT_NAMES_RU[sl]} style={{ background: r.owned.includes(sl) ? "var(--ok)" : r.catalyzable.includes(sl) ? "#3fb8a8" : "rgba(224,96,96,.35)" }}>
+                    {SLOT_SHORT[sl]}
                   </span>
                 ))}
+                <span className="num" style={{ marginLeft: 8, fontWeight: 700 }}>{r.pieces}/5</span>
+                {r.catalyzable.length > 0 && <span style={{ color: "#3fb8a8", marginLeft: 6 }} title="можно катализировать">⚗{r.catalyzable.length}</span>}
               </div>
-            )}
-          </div>
-        ))}
+              <div className="tier-vals num" title="ценность бонусов из сима">
+                <span className="muted">2pc</span> <b>{r.val2 != null ? `${r.val2 > 0 ? "+" : ""}${r.val2.toFixed(1)}%` : "—"}</b>
+                <span className="muted" style={{ marginLeft: 8 }}>4pc</span> <b style={{ color: r.val4 != null && r.val4 > 0 ? "var(--ok)" : undefined }}>{r.val4 != null ? `${r.val4 > 0 ? "+" : ""}${r.val4.toFixed(1)}%` : "—"}</b>
+                <span className="muted" style={{ marginLeft: 8 }}>{r.pieces >= 4 ? "4pc есть" : `до 4pc ${r.toFour} ч.`}</span>
+              </div>
+              <div className="tier-prio" title="приоритет = ценность 4pc × близость к 4pc (1 часть → 1.0, 2 → 0.6, 3+ → 0.3; есть 4pc → 0)">
+                <div className="tier-prio-bar"><div style={{ width: `${prioW}%` }} /></div>
+                <div className="num" style={{ fontSize: 18, fontWeight: 700, color: r.priority == null ? "var(--text-muted)" : r.priority > 0 ? "var(--ok)" : "var(--text-muted)" }}>{r.priority != null ? r.priority.toFixed(1) : "—"}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <h2 style={{ marginTop: 20 }}>Токены — кому</h2>
