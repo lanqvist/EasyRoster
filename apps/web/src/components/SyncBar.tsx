@@ -50,7 +50,7 @@ export function SyncBar({ onFinished }: Props) {
   const p = status?.progress;
 
   return (
-    <div className="card" style={{ padding: "12px 16px" }}>
+    <div className="card" style={{ padding: "12px 16px", overflow: "visible" }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div className="row" style={{ gap: 0, position: "relative" }}>
           <button className="primary" disabled={running} onClick={() => run(api.syncAll)} title="Ростер гильдии по Blizzard API + профили рейдеров (только изменившиеся, If-Modified-Since). Это же делает автосинк.">
