@@ -8,6 +8,26 @@ export const OBTAINED_STYLE: Record<ObtainedStatus, { color: string; label: stri
   no: { color: "var(--bad)", label: "нет", bg: "rgba(224,96,96,.12)" },
 };
 
+/** Бейдж персонального сима: «+4.8% Myth · +1.4% Hero», для танка — с входящим уроном. */
+export function SimBadge({ sources }: { sources: BisEntry["sources"] }) {
+  const sims = sources.filter((x) => (x.source === "simc" || x.source === "droptimizer") && x.score != null);
+  if (sims.length === 0) return null;
+  const parts = sims
+    .map((x) => {
+      const m = x.meta as { track?: string; delta?: number; dtpsPct?: number | null; role?: string } | null | undefined;
+      const track = m?.track ? ` ${m.track}` : "";
+      const dt = m?.role === "tank" && typeof m.dtpsPct === "number" ? ` (урон ${m.dtpsPct > 0 ? "+" : ""}${m.dtpsPct.toFixed(1)}%)` : "";
+      return { pct: x.score!, text: `${x.score! > 0 ? "+" : ""}${x.score!.toFixed(1)}%${track}${dt}`, tip: m?.delta != null ? `Δ ${Math.round(m.delta)} dps` : "" };
+    })
+    .sort((a, b) => b.pct - a.pct);
+  const best = parts[0]!;
+  return (
+    <div style={{ color: best.pct > 0 ? "var(--ok)" : "var(--text-muted)", fontSize: 11 }} title={parts.map((p) => `${p.text} ${p.tip}`).join("\n")}>
+      сим {parts.map((p) => p.text).join(" · ")}
+    </div>
+  );
+}
+
 export const SOURCE_LABEL: Record<string, string> = { icyveins: "Icy Veins", wcl: "WCL", droptimizer: "Droptimizer", simc: "SimC", manual: "Ручное" };
 
 export function BisSlotList({
@@ -60,6 +80,7 @@ export function BisSlotList({
                     <td className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }} title={e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\n")}>
                       {[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}
                       <span className="num"> · {e.score}</span>
+                      <SimBadge sources={e.sources} />
                     </td>
                     <td style={{ color: st.color, fontSize: 12, whiteSpace: "nowrap" }} title={e.obtainedDetail ?? ""}>
                       {st.label}

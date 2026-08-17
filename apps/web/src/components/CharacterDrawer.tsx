@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
-import { EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type BisCharacterView, type BisEntry, type CharacterDetail } from "@easyroster/core";
+import { SLOT_NAMES_RU, wowheadUrl, EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type BisCharacterView, type BisEntry, type CharacterDetail } from "@easyroster/core";
 import { BisSlotList, SOURCE_LABEL } from "./BisSlotList";
 import { api } from "../lib/api";
-import { classColor, className, fmtDate, QUALITY_COLORS, ROLE_RU, roleOf, specName } from "../lib/format";
+import { classColor, className, fmtDate, QUALITY_COLORS, QUALITY_COLORS_NUM, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
 
 export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: number; onClose: () => void; initialTab?: "gear" | "bis" }) {
   const { config } = useConfig();
   const [data, setData] = useState<CharacterDetail | null>(null);
-  const [tab, setTab] = useState<"gear" | "bis">(initialTab);
+  const [tab, setTab] = useState<"gear" | "bis" | "sim">(initialTab);
   const [bis, setBis] = useState<BisCharacterView | null>(null);
   const [bisErr, setBisErr] = useState<string | null>(null);
 
@@ -125,7 +125,9 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
             <div className="row" style={{ marginBottom: 10, gap: 6 }}>
               <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>
               <button className={tab === "bis" ? "primary" : undefined} onClick={() => setTab("bis")}>BiS-лист</button>
+              <button className={tab === "sim" ? "primary" : undefined} onClick={() => setTab("sim")}>Сим</button>
             </div>
+            {tab === "sim" && <SimResults characterId={id} locale={config?.locale ?? "ru_RU"} onChanged={loadBis} />}
             {tab === "bis" && (
               <div>
                 {bisErr && <div className="alert bad">{bisErr}</div>}
@@ -238,6 +240,89 @@ function ManualRules({ specId, characterId, onChange }: { specId: number; charac
           <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SimResults({ characterId, locale, onChanged }: { characterId: number; locale: string; onChanged: () => void }) {
+  const [data, setData] = useState<{ report: any; results: any[] } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [track, setTrack] = useState<string>("");
+  const [slotF, setSlotF] = useState<string>("");
+  const load = () => api.simCharacter(characterId).then(setData).catch((e) => setErr((e as Error).message));
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [characterId]);
+  const ru = locale.startsWith("ru");
+  const rows = (data?.results ?? []).filter((r) => (!track || r.meta?.track === track) && (!slotF || r.slot === slotF));
+  const tracks = [...new Set((data?.results ?? []).map((r) => r.meta?.track).filter(Boolean))] as string[];
+  const slots = [...new Set((data?.results ?? []).map((r) => r.slot))] as string[];
+  const isTank = data?.results?.[0]?.meta?.role === "tank";
+  return (
+    <div>
+      <SimBox characterId={characterId} onDone={() => { void load(); onChanged(); }} />
+      {err && <div className="alert bad">{err}</div>}
+      {data && !data.report && <div className="placeholder">Сима ещё не было — нажмите «Симить сейчас».</div>}
+      {data?.report && (
+        <>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+            {data.report.kind === "simc" ? "SimC" : "Droptimizer"} · {fmtDate(data.report.simDate ?? data.report.importedAt)} · база{" "}
+            <b className="num">{Math.round(data.report.baselineDps ?? 0).toLocaleString("ru-RU")}</b> dps · {data.report.fightStyle ?? ""} · результатов {data.results.length}
+          </div>
+          <div className="row" style={{ marginBottom: 8 }}>
+            <select value={track} onChange={(e) => setTrack(e.target.value)}>
+              <option value="">Все треки</option>
+              {tracks.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select value={slotF} onChange={(e) => setSlotF(e.target.value)}>
+              <option value="">Все слоты</option>
+              {slots.map((s) => <option key={s} value={s}>{SLOT_NAMES_RU[s] ?? s}</option>)}
+            </select>
+          </div>
+          <table style={{ fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Предмет</th>
+                <th>Слот</th>
+                <th>Трек</th>
+                <th className="num">{isTank ? "Итог" : "DPS"}</th>
+                {isTank && <th className="num">DPS</th>}
+                {isTank && <th className="num">Вх. урон</th>}
+                {isTank && <th className="num">Самолеч.</th>}
+                <th className="num">Δ dps</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const m = r.meta ?? {};
+                const it = r.item;
+                const dpsPct = m.base ? (m.delta / m.base) * 100 : r.score;
+                const col = (v: number | null | undefined, invert = false) => (v == null ? "inherit" : (invert ? -v : v) > 0.05 ? "var(--ok)" : (invert ? -v : v) < -0.05 ? "var(--bad)" : "var(--text-muted)");
+                return (
+                  <tr key={r.id}>
+                    <td style={{ width: 24, padding: "2px 4px" }}>{it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />}</td>
+                    <td>
+                      <a href={wowheadUrl(r.itemId, r.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[it?.quality ?? 4] }}>
+                        {(ru && it?.nameRu) || it?.name || `#${r.itemId}`}
+                      </a>
+                      {m.tokenId ? <span className="muted"> · токен</span> : null}
+                    </td>
+                    <td className="muted">{SLOT_NAMES_RU[r.slot] ?? r.slot}</td>
+                    <td className="muted">{m.track}</td>
+                    <td className="num" style={{ color: col(r.score), fontWeight: 600 }}>{r.score > 0 ? "+" : ""}{Number(r.score).toFixed(2)}%</td>
+                    {isTank && <td className="num" style={{ color: col(dpsPct) }}>{dpsPct > 0 ? "+" : ""}{dpsPct.toFixed(2)}%</td>}
+                    {isTank && <td className="num" style={{ color: col(m.dtpsPct, true) }}>{m.dtpsPct != null ? `${m.dtpsPct > 0 ? "+" : ""}${m.dtpsPct.toFixed(2)}%` : "—"}</td>}
+                    {isTank && <td className="num" style={{ color: col(m.hpsPct) }}>{m.hpsPct != null ? `${m.hpsPct > 0 ? "+" : ""}${m.hpsPct.toFixed(2)}%` : "—"}</td>}
+                    <td className="num muted">{m.delta != null ? `${m.delta > 0 ? "+" : ""}${Math.round(m.delta)}` : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 }
