@@ -189,8 +189,8 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 }
 .item-card:hover { background: rgba(217,164,65,.08); }
 .item-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
-.item-card-main { min-width: 0; }
-.item-card-meta { font-size: 12px; margin-top: 2px; margin-left: 38px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-card-main { min-width: 0; flex: 1 1 auto; }
+.item-card-meta { font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item-card-side { text-align: right; flex: none; }
 /* строки мини-карточки как карточки */
 .sf-card { border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; background: var(--bg-elev-2); margin-bottom: 4px; padding: 6px 8px; }

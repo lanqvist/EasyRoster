@@ -3,7 +3,7 @@ import { TRACK_NAMES_RU, SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, t
 import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
-import { ItemLink } from "../components/ItemLink";
+import { ItemIcon, ItemLink } from "../components/ItemLink";
 import { useConfig } from "../lib/config-context";
 import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
@@ -126,8 +126,9 @@ export function RaidNightPage() {
               const wanters3 = w.slice(0, 3);
               return (
                 <div key={it.id} className={`item-card${selectedItem?.id === it.id ? " active" : ""}`} onClick={() => setSelectedItem(it)}>
+                  <ItemIcon itemId={it.id} icon={it.icon} size={36} />
                   <div className="item-card-main">
-                    <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} size={32} style={{ fontSize: 14, fontWeight: 600 }} />
+                    <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} quality={it.quality} ru={ru} style={{ fontSize: 14, fontWeight: 600 }} />
                     <div className="muted item-card-meta">
                       {it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}
                       {wanters3.length > 0 && (

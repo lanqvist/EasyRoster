@@ -1,6 +1,26 @@
 import { iconUrl, wowheadUrl } from "@easyroster/core";
 import { QUALITY_COLORS_NUM } from "../lib/format";
 
+/** Иконка предмета с фолбэком на Blizzard media. */
+export function ItemIcon({ itemId, icon, size = 32, style }: { itemId: number; icon?: string | null; size?: number; style?: React.CSSProperties }) {
+  return (
+    <img
+      src={iconUrl(icon, size >= 40 ? "large" : size >= 22 ? "medium" : "small")}
+      width={size}
+      height={size}
+      alt=""
+      style={{ borderRadius: 4, flex: "none", display: "block", ...style }}
+      loading="lazy"
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (img.dataset.fallback) return;
+        img.dataset.fallback = "1";
+        img.src = `/api/items/${itemId}/icon`;
+      }}
+    />
+  );
+}
+
 /**
  * Ссылка на предмет с иконкой и тултипом Wowhead. Иконка и имя — внутри одного <a>,
  * чтобы наведение на любую часть показывало тултип; data-wowhead задаёт предмет/bonus явно.
@@ -40,7 +60,7 @@ export function ItemLink({
     >
       {icon !== undefined && (
         <img
-          src={iconUrl(icon, "small")}
+          src={iconUrl(icon, size >= 40 ? "large" : size >= 22 ? "medium" : "small")}
           width={size}
           height={size}
           alt=""
