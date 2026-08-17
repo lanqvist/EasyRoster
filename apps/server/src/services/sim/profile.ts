@@ -36,6 +36,9 @@ export interface ProfileInput {
   specId: number;
   equipment: EquipmentRow[];
   role: "attack" | "tank";
+  /** явно заданные таланты (override / профиль SimC); null = таланты персонажа из API */
+  talents?: string | null;
+  talentsNote?: string | null;
 }
 
 export function buildSimcProfile(input: ProfileInput): { text: string; slots: string[] } {
@@ -51,7 +54,9 @@ export function buildSimcProfile(input: ProfileInput): { text: string; slots: st
   lines.push(`race=${SIMC_RACE[character.raceId ?? 0] ?? "human"}`);
   lines.push(`spec=${spec}`);
   lines.push(`role=${input.role}`);
-  if (character.talentLoadoutCode) lines.push(`talents=${character.talentLoadoutCode}`);
+  const talents = input.talents ?? character.talentLoadoutCode;
+  if (talents) lines.push(`talents=${talents}`);
+  if (input.talentsNote) lines.push(`# talents: ${input.talentsNote}`);
   lines.push("");
   const slots: string[] = [];
   for (const e of equipment) {

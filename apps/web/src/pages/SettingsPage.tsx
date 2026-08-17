@@ -26,6 +26,7 @@ export function SettingsPage() {
     maxAgeDays: config?.sim.maxAgeDays ?? 7,
     simcPath: config?.sim.simcPath ?? "",
     tierSetName: config?.sim.tierSetName ?? "",
+    talentsSource: config?.sim.talentsSource ?? "simc-profile",
   }));
   const [raidDiff, setRaidDiff] = useState(config?.season.raidDifficulty ?? "normal");
   const [bnetId, setBnetId] = useState(config?.blizzard.clientId ?? "");
@@ -188,6 +189,14 @@ export function SettingsPage() {
               <option value="heroic">Heroic → Hero</option>
               <option value="mythic">Mythic → Myth</option>
             </select>
+          </div>
+          <div className="field">
+            <label>Таланты для сима</label>
+            <select value={sim.talentsSource} onChange={(e) => setSim({ ...sim, talentsSource: e.target.value as typeof sim.talentsSource })}>
+              <option value="simc-profile">Штатный рейдовый профиль SimC (single-target)</option>
+              <option value="character">Таланты персонажа из Blizzard API</option>
+            </select>
+            <span className="hint">Ручной код талантов в карточке персонажа побеждает в любом случае</span>
           </div>
           <div className="field">
             <label>Имя сет-бонуса в SimC (пусто = авто, напр. mid2)</label>

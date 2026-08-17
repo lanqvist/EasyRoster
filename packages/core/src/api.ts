@@ -33,7 +33,14 @@ export interface CharacterRow {
   rank: number;
   inGuild: boolean;
   isRaider: boolean;
+  /** эффективная спека: рейдовая (если задана вручную) или обнаруженная в API */
   activeSpecId: number | null;
+  /** спека, обнаруженная в Blizzard API */
+  detectedSpecId: number | null;
+  /** рейдовая спека, заданная вручную (переопределяет обнаруженную) */
+  raidSpecId: number | null;
+  /** код талантов, заданный вручную (всегда побеждает) */
+  talentsOverride: string | null;
   ilvlEquipped: number | null;
   ilvlAvg: number | null;
   lastLoginMs: number | null;

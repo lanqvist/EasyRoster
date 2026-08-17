@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SLOT_NAMES_RU, wowheadUrl, EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type BisCharacterView, type BisEntry, type CharacterDetail } from "@easyroster/core";
+import { SPECS, SLOT_NAMES_RU, wowheadUrl, EQUIP_SLOT_NAMES_RU, EQUIP_SLOT_ORDER, TRACK_NAMES_RU, iconUrl, type BisCharacterView, type BisEntry, type CharacterDetail } from "@easyroster/core";
 import { BisSlotList, SOURCE_LABEL } from "./BisSlotList";
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, QUALITY_COLORS, QUALITY_COLORS_NUM, ROLE_RU, roleOf, specName } from "../lib/format";
@@ -128,6 +128,7 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
               </button>
             </div>
 
+            <RaidSpecBox character={c} onSaved={() => { void load(); void loadBis(); }} />
             <div className="row" style={{ marginBottom: 10, gap: 6 }}>
               <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>
               <button className={tab === "bis" ? "primary" : undefined} onClick={() => setTab("bis")}>BiS-лист</button>
@@ -247,6 +248,49 @@ function ManualRules({ specId, characterId, onChange }: { specId: number; charac
           <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function RaidSpecBox({ character, onSaved }: { character: CharacterDetail["character"]; onSaved: () => void }) {
+  const [raidSpec, setRaidSpec] = useState<number | "">(character.raidSpecId ?? "");
+  const [talents, setTalents] = useState(character.talentsOverride ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const specs = SPECS.filter((s) => s.classId === character.classId);
+  const changed = (raidSpec === "" ? null : raidSpec) !== character.raidSpecId || (talents.trim() || null) !== (character.talentsOverride ?? null);
+  const save = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.characterSettings(character.id, { raidSpecId: raidSpec === "" ? null : raidSpec, talentsOverride: talents.trim() || null });
+      setMsg("Сохранено — BiS пересчитан, сим поставится в очередь при следующем запуске");
+      onSaved();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card" style={{ padding: "8px 12px", marginBottom: 10 }}>
+      <div className="row" style={{ gap: 10, alignItems: "flex-end" }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Рейдовая спека</label>
+          <select value={raidSpec} onChange={(e) => setRaidSpec(e.target.value === "" ? "" : Number(e.target.value))}>
+            <option value="">как в API ({specName(character.detectedSpecId)})</option>
+            {specs.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}{s.id === character.detectedSpecId ? " (в API)" : ""}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
+          <label>Таланты для сима (код из игры; пусто = по настройке)</label>
+          <input value={talents} onChange={(e) => setTalents(e.target.value)} placeholder="C4QA…" style={{ fontFamily: "var(--mono)", fontSize: 11 }} />
+        </div>
+        <button className={changed ? "primary" : undefined} disabled={busy || !changed} onClick={save}>Сохранить</button>
+      </div>
+      {msg && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{msg}</div>}
     </div>
   );
 }

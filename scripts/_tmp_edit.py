@@ -5,61 +5,89 @@ def edit(p, pairs):
         s=s.replace(a,b,1)
     open(p,'w',encoding='utf8').write(s)
 
-edit('apps/server/src/services/wow-integration.ts',[
- ('  buildExportData(): { data: Record<string, Record<number, ExportEntry>>; characters: number } {',
-  '''  /** Прогресс тира персонажа (устанавливается контекстом из TierService). */
-  tierProvider: ((c: CharacterRow) => { pieces: number; val4: number | null; val2: number | null }) | null = null;
-
-  buildExportData(): { data: Record<string, Record<number, ExportEntry>>; characters: number } {'''),
- ('      const key = rclcKeyForExport(c.name, c.realmName || c.realmSlug);\n      const map: Record<number, ExportEntry> = {};',
-  '''      const key = rclcKeyForExport(c.name, c.realmName || c.realmSlug);
-      const map: Record<number, ExportEntry> = {};
-      const tier = this.tierProvider ? this.tierProvider(c) : null;'''),
- ('          if (e.isTier) entry.t = 1;',
-  '''          if (e.isTier) {
-            entry.t = 1;
-            if (tier) {
-              entry.tp = tier.pieces;
-              if (tier.val4 != null) entry.t4 = Math.round(tier.val4 * 10) / 10;
-              if (tier.val2 != null) entry.t2 = Math.round(tier.val2 * 10) / 10;
-              const next = tier.pieces + 1;
-              entry.tc = next === 2 ? 2 : next === 4 ? 4 : 0;
-            }
-          }'''),
- ('  sk?: string; // тип источника самого предмета\n',
-  '''  sk?: string; // тип источника самого предмета
-  tp?: number; // частей тира надето
-  t4?: number; // ценность 4pc, %
-  t2?: number; // ценность 2pc, %
-  tc?: number; // эта часть закроет: 2 / 4 / 0
-'''),
-])
-s=open('apps/server/src/services/wow-integration.ts',encoding='utf8').read()
-if 'type CharacterRow' not in s.split('\n')[3] and 'CharacterRow' not in s[:600]:
-    s=s.replace('  isSimSource, rclcKeyForExport, type AddonStatus,','  isSimSource, rclcKeyForExport, type AddonStatus, type CharacterRow,',1)
-open('apps/server/src/services/wow-integration.ts','w',encoding='utf8').write(s)
-
-edit('apps/server/src/context.ts',[
- ('  sim.tierPiecesOf = (c) => tier.progress(c).pieces;',
-  '''  sim.tierPiecesOf = (c) => tier.progress(c).pieces;
-  wow.tierProvider = (c) => {
-    const p = tier.progress(c);
-    const r = tier.rows().find((x) => x.characterId === c.id);
-    return { pieces: p.pieces, val4: r?.val4 ?? null, val2: r?.val2 ?? null };
-  };'''),
+edit('apps/web/src/lib/api.ts',[
+ ('  character: (id: number) => request<CharacterDetail>(`/api/characters/${id}`),',
+  '''  character: (id: number) => request<CharacterDetail>(`/api/characters/${id}`),
+  characterSettings: (id: number, body: { raidSpecId?: number | null; talentsOverride?: string | null }) =>
+    request<CharacterRow>(`/api/characters/${id}/settings`, { method: "PUT", body: JSON.stringify(body) }),'''),
 ])
 
-# addon
-edit('addon/RCLootCouncil_EasyRoster/core.lua',[
- ('''	if entry.c == 1 then text = text .. " |cff9a9dab(→катализ.)|r" end''','''	if entry.c == 1 then text = text .. " |cff9a9dab(→катализ.)|r" end
-	if entry.tc == 4 then text = text .. " |cff4fbf7aзакроет 4pc|r" elseif entry.tc == 2 then text = text .. " |cffe0b64aзакроет 2pc|r" end'''),
- ('''	if entry.t == 1 then tinsert(lines, "Тир-предмет") end''','''	if entry.t == 1 then
-		local tl = "Тир-предмет"
-		if entry.tp then tl = tl .. string.format(" · надето %d/5", entry.tp) end
-		if entry.t4 then tl = tl .. string.format(" · 4pc = %+.1f%%", entry.t4) end
-		if entry.t2 then tl = tl .. string.format(" · 2pc = %+.1f%%", entry.t2) end
-		if entry.tc == 4 then tl = tl .. " · |cff4fbf7aэта часть закроет 4pc|r" elseif entry.tc == 2 then tl = tl .. " · закроет 2pc" end
-		tinsert(lines, tl)
-	end'''),
+# Drawer: блок «Рейдовая спека / таланты» под шапкой
+edit('apps/web/src/components/CharacterDrawer.tsx',[
+ ('            <div className="row" style={{ marginBottom: 10, gap: 6 }}>\n              <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>',
+  '''            <RaidSpecBox character={c} onSaved={() => { void load(); void loadBis(); }} />
+            <div className="row" style={{ marginBottom: 10, gap: 6 }}>
+              <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>'''),
+ ('function SimResults(','''function RaidSpecBox({ character, onSaved }: { character: CharacterDetail["character"]; onSaved: () => void }) {
+  const [raidSpec, setRaidSpec] = useState<number | "">(character.raidSpecId ?? "");
+  const [talents, setTalents] = useState(character.talentsOverride ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const specs = SPECS.filter((s) => s.classId === character.classId);
+  const changed = (raidSpec === "" ? null : raidSpec) !== character.raidSpecId || (talents.trim() || null) !== (character.talentsOverride ?? null);
+  const save = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api.characterSettings(character.id, { raidSpecId: raidSpec === "" ? null : raidSpec, talentsOverride: talents.trim() || null });
+      setMsg("Сохранено — BiS пересчитан, сим поставится в очередь при следующем запуске");
+      onSaved();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card" style={{ padding: "8px 12px", marginBottom: 10 }}>
+      <div className="row" style={{ gap: 10, alignItems: "flex-end" }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Рейдовая спека</label>
+          <select value={raidSpec} onChange={(e) => setRaidSpec(e.target.value === "" ? "" : Number(e.target.value))}>
+            <option value="">как в API ({specName(character.detectedSpecId)})</option>
+            {specs.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}{s.id === character.detectedSpecId ? " (в API)" : ""}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 0, flex: 1, minWidth: 220 }}>
+          <label>Таланты для сима (код из игры; пусто = по настройке)</label>
+          <input value={talents} onChange={(e) => setTalents(e.target.value)} placeholder="C4QA…" style={{ fontFamily: "var(--mono)", fontSize: 11 }} />
+        </div>
+        <button className={changed ? "primary" : undefined} disabled={busy || !changed} onClick={save}>Сохранить</button>
+      </div>
+      {msg && <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>{msg}</div>}
+    </div>
+  );
+}
+
+function SimResults('''),
+])
+s=open('apps/web/src/components/CharacterDrawer.tsx',encoding='utf8').read()
+if 'SPECS' not in s.split('\n')[1]:
+    s=s.replace('import { SLOT_NAMES_RU, wowheadUrl,','import { SPECS, SLOT_NAMES_RU, wowheadUrl,',1)
+open('apps/web/src/components/CharacterDrawer.tsx','w',encoding='utf8').write(s)
+
+# Roster: пометка переопределённой спеки
+edit('apps/web/src/pages/RosterPage.tsx',[
+ ('                      {r.activeSpecId ? <span className="muted"> · {specName(r.activeSpecId)}</span> : null}',
+  '''                      {r.activeSpecId ? <span className="muted"> · {specName(r.activeSpecId)}</span> : null}
+                      {r.raidSpecId && r.raidSpecId !== r.detectedSpecId ? <span className="muted" style={{ fontSize: 11 }} title="Рейдовая спека задана вручную"> (API: {specName(r.detectedSpecId)})</span> : null}'''),
+])
+
+# Settings: источник талантов
+edit('apps/web/src/pages/SettingsPage.tsx',[
+ ('    tierSetName: config?.sim.tierSetName ?? "",\n  }));','    tierSetName: config?.sim.tierSetName ?? "",\n    talentsSource: config?.sim.talentsSource ?? "simc-profile",\n  }));'),
+ ('''          <div className="field">
+            <label>Имя сет-бонуса в SimC (пусто = авто, напр. mid2)</label>''','''          <div className="field">
+            <label>Таланты для сима</label>
+            <select value={sim.talentsSource} onChange={(e) => setSim({ ...sim, talentsSource: e.target.value as typeof sim.talentsSource })}>
+              <option value="simc-profile">Штатный рейдовый профиль SimC (single-target)</option>
+              <option value="character">Таланты персонажа из Blizzard API</option>
+            </select>
+            <span className="hint">Ручной код талантов в карточке персонажа побеждает в любом случае</span>
+          </div>
+          <div className="field">
+            <label>Имя сет-бонуса в SimC (пусто = авто, напр. mid2)</label>'''),
 ])
 print("ok")

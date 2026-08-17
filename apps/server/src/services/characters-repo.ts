@@ -143,6 +143,12 @@ export class CharactersRepo {
     }
   }
 
+  /** Ручные настройки персонажа: рейдовая спека и таланты. */
+  setOverrides(id: number, o: { raidSpecId?: number | null; talentsOverride?: string | null }): void {
+    if (o.raidSpecId !== undefined) this.db.conn.prepare("UPDATE characters SET raid_spec_id = ? WHERE id = ?").run(o.raidSpecId, id);
+    if (o.talentsOverride !== undefined) this.db.conn.prepare("UPDATE characters SET talents_override = ? WHERE id = ?").run(o.talentsOverride && o.talentsOverride.trim() ? o.talentsOverride.trim() : null, id);
+  }
+
   /** Обновить только «мягкие» поля при 304 (профиль не менялся). */
   touchProfile(id: number, syncedAt: number): void {
     this.db.conn.prepare("UPDATE characters SET profile_synced_at = ?, profile_status = 'ok', profile_message = NULL WHERE id = ?").run(syncedAt, id);
@@ -161,7 +167,10 @@ function mapCharacter(r: any): CharacterRow {
     rank: r.rank,
     inGuild: !!r.in_guild,
     isRaider: !!r.is_raider,
-    activeSpecId: r.active_spec_id,
+    activeSpecId: r.raid_spec_id ?? r.active_spec_id,
+    detectedSpecId: r.active_spec_id,
+    raidSpecId: r.raid_spec_id ?? null,
+    talentsOverride: r.talents_override ?? null,
     ilvlEquipped: r.ilvl_equipped,
     ilvlAvg: r.ilvl_avg,
     lastLoginMs: r.last_login_ms,

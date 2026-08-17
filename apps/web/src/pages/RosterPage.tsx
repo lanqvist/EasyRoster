@@ -127,6 +127,7 @@ export function RosterPage() {
                     <td>
                       {className(r.classId)}
                       {r.activeSpecId ? <span className="muted"> · {specName(r.activeSpecId)}</span> : null}
+                      {r.raidSpecId && r.raidSpecId !== r.detectedSpecId ? <span className="muted" style={{ fontSize: 11 }} title="Рейдовая спека задана вручную"> (API: {specName(r.detectedSpecId)})</span> : null}
                     </td>
                     <td>{role ? ROLE_RU[role] : "—"}</td>
                     <td>

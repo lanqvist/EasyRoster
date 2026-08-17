@@ -109,6 +109,8 @@ export const AppConfigSchema = z.object({
       maxAgeDays: z.number().int().min(1).max(60).default(7),
       /** путь к simc.exe (пусто = скачанный автоматически) */
       simcPath: z.string().default(""),
+      /** источник талантов для сима: штатный рейдовый профиль SimC (single-target) | таланты персонажа */
+      talentsSource: z.enum(["simc-profile", "character"]).default("simc-profile"),
       /** имя сет-бонуса в simc (mid2 …); пусто = автоматически из подписи сезона */
       tierSetName: z.string().default(""),
     })

@@ -95,7 +95,7 @@ export class SimService {
   private equipmentHash(c: CharacterRow): string {
     const cfg = this.config.get().sim;
     const eq = this.chars.equipment(c.id).map((e) => [e.slot, e.itemId, e.bonusIds.join("/"), e.enchantId, e.gems.map((g) => g.itemId).join("/")]);
-    const payload = JSON.stringify({ eq, spec: c.activeSpecId, talents: c.talentLoadoutCode, fs: cfg.fightStyle, rt: cfg.raidTracks, dt: cfg.dungeonTracks, te: cfg.targetError });
+    const payload = JSON.stringify({ eq, spec: c.activeSpecId, talents: c.talentsOverride ?? (cfg.talentsSource === "simc-profile" ? "profile" : c.talentLoadoutCode), fs: cfg.fightStyle, rt: cfg.raidTracks, dt: cfg.dungeonTracks, te: cfg.targetError });
     return crypto.createHash("sha1").update(payload).digest("hex");
   }
 
@@ -166,7 +166,20 @@ export class SimService {
 
     try {
       // --- профиль
-      const profile = buildSimcProfile({ character: c, specId, equipment, role });
+      // таланты: ручные → штатный профиль SimC (single-target) → таланты персонажа
+      let talents: string | null = null;
+      let talentsNote2: string | null = null;
+      if (c.talentsOverride) {
+        talents = c.talentsOverride;
+        talentsNote2 = "ручные";
+      } else if (simCfg.talentsSource === "simc-profile") {
+        const def = defaultTalentsFromProfiles(info.path, c.classId, specId);
+        if (def) {
+          talents = def.talents;
+          talentsNote2 = `профиль SimC ${def.source}`;
+        }
+      }
+      const profile = buildSimcProfile({ character: c, specId, equipment, role, talents, talentsNote: talentsNote2 });
 
       // --- кандидаты
       const season = cfg.season;
@@ -251,7 +264,7 @@ export class SimService {
       });
       this.db.conn
         .prepare("UPDATE sim_runs SET finished_at = ?, ok = 1, message = ?, profilesets = ?, baseline = ?, elapsed_ms = ?, tier_pieces = ?, tier2_pct = ?, tier4_pct = ? WHERE id = ?")
-        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с${talentsNote}`, cands.length, parsed.baseline, res.elapsedMs, tierPieces, tier.val2, tier.val4, runId);
+        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с${talentsNote}${talentsNote2 ? ` (таланты: ${talentsNote2})` : ""}`, cands.length, parsed.baseline, res.elapsedMs, tierPieces, tier.val2, tier.val4, runId);
       this.log.info(`sim ${c.name}: ${cands.length} профильсетов, base ${Math.round(parsed.baseline)}, ${Math.round(res.elapsedMs / 1000)} с`);
       return { profilesets: cands.length, baseline: parsed.baseline, elapsedMs: res.elapsedMs };
     } catch (e) {

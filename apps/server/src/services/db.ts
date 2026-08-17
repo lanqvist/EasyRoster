@@ -224,6 +224,11 @@ const MIGRATIONS: string[] = [
   ALTER TABLE sim_runs ADD COLUMN tier2_pct REAL;
   ALTER TABLE sim_runs ADD COLUMN tier4_pct REAL;
   `,
+  // v8 — рейдовая спека и таланты вручную
+  `
+  ALTER TABLE characters ADD COLUMN raid_spec_id INTEGER;
+  ALTER TABLE characters ADD COLUMN talents_override TEXT;
+  `,
 ];
 
 export class Db {

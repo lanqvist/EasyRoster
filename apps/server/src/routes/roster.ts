@@ -26,6 +26,18 @@ export async function rosterRoutes(app: FastifyInstance, ctx: AppContext): Promi
     return detail;
   });
 
+  /** Ручные настройки персонажа: рейдовая спека (null = как в API), таланты (пусто = по источнику из настроек). */
+  app.put("/api/characters/:id/settings", async (req, reply) => {
+    const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);
+    const body = z.object({ raidSpecId: z.number().int().nullable().optional(), talentsOverride: z.string().nullable().optional() }).parse(req.body ?? {});
+    if (!ctx.sync.repo.get(id)) {
+      reply.code(404);
+      return { error: "Персонаж не найден" };
+    }
+    ctx.sync.repo.setOverrides(id, body);
+    return ctx.sync.repo.get(id);
+  });
+
   app.get("/api/sync/status", async () => ctx.sync.status());
 
   /** Синк ростера гильдии (быстро, 1 запрос). */
