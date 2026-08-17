@@ -49,8 +49,10 @@ function trackText(t: { name: string; ilvl: number | null } | null): string {
 /** Чипы: источник (тип + босс/подземелье), трек дропа для выбранной сложности, надетое, Δ ilvl. */
 export function SourceChips({ e, showEquipped = true }: { e: BisEntry; showEquipped?: boolean }) {
   const kind = e.sourceKind;
-  const src = e.drops.length
-    ? [...new Set(e.drops.map((d) => d.encounterName))].slice(0, 2).join(", ") + (e.drops.length > 2 ? "…" : "")
+  const good = e.drops.filter((d) => d.kind === "raid" || d.kind === "mplus" || d.kind === "world");
+  const use = good.length ? good : e.drops.filter((d) => !/catalyst/i.test(d.instanceName));
+  const src = use.length
+    ? [...new Set(use.map((d) => d.encounterName))].slice(0, 2).join(", ") + (use.length > 2 ? "…" : "")
     : e.sources.find((s) => s.note)?.note ?? "";
   const dropT = e.dropTrack;
   const eq = e.equippedBest;

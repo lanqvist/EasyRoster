@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
 import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
@@ -8,7 +8,7 @@ import { useConfig } from "../lib/config-context";
 import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
-import { CharacterDrawer } from "../components/CharacterDrawer";
+import { SlotFocus } from "../components/SlotFocus";
 
 /**
  * Лут-ночь: выбираем рейд → босса → предмет; справа — кому и насколько это нужно
@@ -24,7 +24,7 @@ export function RaidNightPage() {
   const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
   const [selectedItem, setSelectedItem] = useState<ItemRow | null>(null);
   const [history, setHistory] = useState<LootHistoryRow[]>([]);
-  const [selectedChar, setSelectedChar] = useState<number | null>(null);
+  const [focus, setFocus] = useState<{ characterId: number; slot: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [onlyNeeded, setOnlyNeeded] = useState(true);
 
@@ -54,6 +54,21 @@ export function RaidNightPage() {
   }, [instanceId, difficulty]);
 
   const enc = view?.encounters.find((e) => e.id === encounterId) ?? null;
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== "ArrowDown" && ev.key !== "ArrowUp") return;
+      const tag = (ev.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+      const list = itemsRef.current;
+      if (!list.length) return;
+      ev.preventDefault();
+      const idx = selectedItem ? list.findIndex((x) => x.id === selectedItem.id) : -1;
+      const next = ev.key === "ArrowDown" ? Math.min(list.length - 1, idx + 1) : Math.max(0, idx - 1);
+      setSelectedItem(list[next] ?? null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedItem]);
   const items = useMemo(() => {
     if (!enc) return [];
     return enc.items
@@ -62,6 +77,8 @@ export function RaidNightPage() {
       .sort((a, b) => b.w.filter((w) => w.obtained !== "yes").length - a.w.filter((w) => w.obtained !== "yes").length);
   }, [enc, wanters, onlyNeeded]);
 
+  const itemsRef = useRef<ItemRow[]>([]);
+  itemsRef.current = items.map((x) => x.it);
   const ru = (config?.locale ?? "ru_RU").startsWith("ru");
   const sel = selectedItem ? wanters[selectedItem.id] ?? [] : [];
 
@@ -95,7 +112,7 @@ export function RaidNightPage() {
         </label>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: focus ? "1fr 1.25fr 1fr" : "1fr 1.4fr", gap: 14 }}>
         <div className="card" style={{ padding: "8px 12px" }}>
           <h2 style={{ fontSize: 14 }}>{enc?.name ?? "—"}</h2>
           <table>
@@ -149,7 +166,7 @@ export function RaidNightPage() {
                     {sel.map((w) => {
                       const st = OBTAINED_STYLE[w.obtained];
                       return (
-                        <tr key={w.characterId + w.slot} style={{ cursor: "pointer" }} onClick={() => setSelectedChar(w.characterId)}>
+                        <tr key={w.characterId + w.slot} className={focus?.characterId === w.characterId && focus.slot === w.slot ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setFocus({ characterId: w.characterId, slot: w.slot })}>
                           <td>
                             <span style={{ color: classColor(w.classId), fontWeight: 600 }}>{w.name}</span>
                             <span className="muted"> · {specName(w.specId)}</span>
@@ -182,6 +199,14 @@ export function RaidNightPage() {
             <div className="muted">Выберите предмет слева.</div>
           )}
         </div>
+        {focus && (
+          <div className="card" style={{ padding: "8px 12px", position: "sticky", top: 8, alignSelf: "start", maxHeight: "calc(100vh - 16px)", overflowY: "auto" }}>
+            <div className="row" style={{ justifyContent: "flex-end" }}>
+              <button style={{ padding: "0 6px", fontSize: 11 }} onClick={() => setFocus(null)}>✕</button>
+            </div>
+            <SlotFocus characterId={focus.characterId} slot={focus.slot} highlightItemId={selectedItem?.id} ru={ru} />
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ padding: "8px 12px", marginTop: 16 }}>
@@ -213,7 +238,7 @@ export function RaidNightPage() {
         )}
       </div>
 
-      {selectedChar !== null && <CharacterDrawer id={selectedChar} onClose={() => setSelectedChar(null)} initialTab="bis" />}
+
     </div>
   );
 }

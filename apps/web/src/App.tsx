@@ -9,6 +9,7 @@ import { LootPage } from "./pages/LootPage";
 import { BisPage } from "./pages/BisPage";
 import { RaidNightPage } from "./pages/RaidNightPage";
 import { TierPage } from "./pages/TierPage";
+import { CharacterPage } from "./pages/CharacterPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 export function App() {
@@ -100,6 +101,7 @@ function Shell() {
           <Route path="/loot" element={<LootPage />} />
           <Route path="/raid-night" element={<RaidNightPage />} />
           <Route path="/tier" element={<TierPage />} />
+          <Route path="/character/:id" element={<CharacterPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/roster" replace />} />
         </Routes>

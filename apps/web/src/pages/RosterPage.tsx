@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CharacterRow } from "@easyroster/core";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useConfig } from "../lib/config-context";
 import { classColor, className, relTime, ROLE_RU, roleOf, specName } from "../lib/format";
@@ -123,6 +124,7 @@ export function RosterPage() {
                     <td>
                       <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                       <span className="muted"> — {r.realmName || r.realmSlug}</span>
+                      <Link to={`/character/${r.id}`} className="muted" style={{ marginLeft: 6, fontSize: 11 }} title="Открыть страницу персонажа" onClick={(e) => e.stopPropagation()}>↗</Link>
                     </td>
                     <td>
                       {className(r.classId)}

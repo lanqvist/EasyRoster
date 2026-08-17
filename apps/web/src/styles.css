@@ -119,3 +119,20 @@ tr.selected td { background: rgba(217,164,65,.08); }
 .item-link:hover { text-decoration: underline; }
 /* тултип Wowhead поверх выезжающей карточки */
 .wowhead-tooltip { z-index: 10000 !important; }
+
+/* карточка персонажа */
+.char-head {
+  position: sticky; top: 0; z-index: 3;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--bg-elev); border-bottom: 1px solid var(--border);
+  padding: 10px 0 8px; margin-bottom: 4px;
+}
+.main .char-head { background: var(--bg); }
+.slot-compare { font-size: 13px; }
+.slot-compare-head, .slot-compare-row {
+  display: grid; grid-template-columns: 96px minmax(220px, 0.9fr) minmax(360px, 1.6fr); gap: 0 14px;
+  padding: 4px 8px; border-bottom: 1px solid var(--border);
+}
+.slot-compare-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 64px; background: var(--bg); z-index: 2; }
+.slot-compare-row:hover { filter: brightness(1.04); }
+@media (max-width: 900px) { .slot-compare-head, .slot-compare-row { grid-template-columns: 80px 1fr; } .slot-compare-row > div:nth-child(3) { grid-column: 1 / -1; } }
