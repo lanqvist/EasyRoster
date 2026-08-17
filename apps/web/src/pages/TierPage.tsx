@@ -21,7 +21,6 @@ export function TierPage() {
   const [err, setErr] = useState<string | null>(null);
   const [sel, setSel] = useState<number | null>(null);
   const [sort, setSort] = useState<"priority" | "val4" | "pieces" | "name">("priority");
-  const [token, setToken] = useState<number | null>(null);
 
   useEffect(() => {
     api.tier().then(setData).catch((e) => setErr((e as Error).message));
@@ -40,7 +39,6 @@ export function TierPage() {
 
   const max4 = Math.max(0.01, ...rows.map((r) => r.val4 ?? 0));
   const maxP = Math.max(0.01, ...rows.map((r) => r.priority ?? 0));
-  const tok = data?.tokens.find((t) => t.tokenId === token) ?? null;
   const slotSources = useMemo(() => {
     const m = new Map<string, Map<number, { tokenId: number; name: string; encounterName: string }>>();
     for (const r of data?.rows ?? []) for (const mt of r.missingTokens) {
@@ -86,11 +84,7 @@ export function TierPage() {
             {slotSources.map((x) => (
               <span key={x.slot}>
                 <b>{SLOT_NAMES_RU[x.slot]}</b>:{" "}
-                {x.tokens.map((t, i) => (
-                  <a key={t.tokenId} href="#" onClick={(e) => { e.preventDefault(); setToken(t.tokenId); }} title={t.name}>
-                    {i ? " / " : ""}{t.encounterName}
-                  </a>
-                ))}
+                {x.tokens.map((t) => t.encounterName).join(" / ")}
               </span>
             ))}
           </div>
@@ -132,43 +126,6 @@ export function TierPage() {
         })}
       </div>
 
-      <h2 style={{ marginTop: 20 }}>Токены — кому</h2>
-      <div className="row" style={{ marginBottom: 8 }}>
-        {data?.tokens.map((t) => (
-          <button key={t.tokenId} className={token === t.tokenId ? "primary" : undefined} onClick={() => setToken(t.tokenId)} title={t.instanceName}>
-            <img src={iconUrl(t.icon, "small")} width={16} height={16} alt="" style={{ verticalAlign: "middle", marginRight: 4, borderRadius: 2 }} onError={(ev) => { const im = ev.currentTarget; if (!im.dataset.fb) { im.dataset.fb = "1"; im.src = `/api/items/${t.tokenId}/icon`; } }} />
-            {t.name} <span className="muted" style={{ fontSize: 11 }}>· {t.encounterName}</span>
-          </button>
-        ))}
-      </div>
-      {tok && (
-        <div className="card" style={{ padding: "8px 12px" }}>
-          {tok.wanters.length === 0 && <div className="muted">Никому из ростера не в BiS.</div>}
-          <div className="cand-list">
-            {tok.wanters.map((w) => (
-              <div key={w.characterId + w.slot} className="cand-card" style={{ borderLeftColor: OBTAINED_STYLE[w.obtained].color }} onClick={() => setSel(w.characterId)}>
-                <div className="cand-main">
-                  <div className="cand-name">
-                    <ClassIcon classId={w.classId} size={18} /><span style={{ color: classColor(w.classId), fontWeight: 700 }}>{w.name}</span>
-                    <span className="muted"> · {specName(w.specId)}</span>
-                  </div>
-                  <div className="cand-meta muted">
-                    {SLOT_NAMES_RU[w.slot] ?? w.slot} · тир {w.pieces}/5 · <span style={{ color: OBTAINED_STYLE[w.obtained].color }}>{OBTAINED_STYLE[w.obtained].label}</span>
-                    {w.closes === 4 ? <b style={{ color: "var(--ok)" }}> · закроет 4pc</b> : w.closes === 2 ? <span style={{ color: "var(--warn)" }}> · закроет 2pc</span> : ""}
-                    {w.val4 != null ? ` · 4pc = ${w.val4 > 0 ? "+" : ""}${w.val4.toFixed(1)}%` : ""}
-                  </div>
-                </div>
-                <div className="cand-pct">
-                  <div className="cand-pct-value" style={{ color: w.piecePct != null && w.piecePct > 0.05 ? "var(--ok)" : "var(--text-muted)" }} title="прирост от этой части с учётом сет-бонуса (сим)">
-                    {w.piecePct != null ? `${w.piecePct > 0 ? "+" : ""}${w.piecePct.toFixed(1)}%` : "—"}
-                  </div>
-                  <div className="cand-pct-sub muted">{w.priority != null ? `приоритет ${w.priority.toFixed(1)}` : "нет сима"}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
       {sel !== null && <CharacterDrawer id={sel} onClose={() => setSel(null)} initialTab="bis" />}
     </div>
   );

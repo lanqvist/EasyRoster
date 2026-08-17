@@ -24,7 +24,6 @@ export function RaidNightPage() {
   const [encounterId, setEncounterId] = useState<number | null>(null);
   const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
   const [selectedItem, setSelectedItem] = useState<ItemRow | null>(null);
-  const [history, setHistory] = useState<LootHistoryRow[]>([]);
   const [focus, setFocus] = useState<{ characterId: number; slot: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [onlyNeeded, setOnlyNeeded] = useState(true);
@@ -38,7 +37,6 @@ export function RaidNightPage() {
         if (raid) setInstanceId(raid.id);
       })
       .catch((e) => setErr((e as Error).message));
-    api.wowHistory({ limit: 40 }).then(setHistory).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -190,34 +188,6 @@ export function RaidNightPage() {
         )}
       </div>
 
-      <div className="card" style={{ padding: "8px 12px", marginTop: 16 }}>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2 style={{ fontSize: 14 }}>История лута RCLootCouncil (последние)</h2>
-          <button onClick={() => api.wowHistory({ limit: 40 }).then(setHistory)}>Обновить</button>
-        </div>
-        {history.length === 0 ? (
-          <div className="muted">Импортируйте историю (кнопка выше) — файлы SavedVariables читаются после /reload или выхода из игры.</div>
-        ) : (
-          <table style={{ fontSize: 12 }}>
-            <tbody>
-              {history.map((h) => (
-                <tr key={h.id}>
-                  <td className="muted" style={{ whiteSpace: "nowrap" }}>{h.date} {h.time?.slice(0, 5)}</td>
-                  <td>{h.playerDisplay}</td>
-                  <td>
-                    <a href={wowheadUrl(h.itemId, h.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer">
-                      {h.itemLink?.match(/\[(.+?)\]/)?.[1] ?? `#${h.itemId}`}
-                    </a>
-                  </td>
-                  <td className="muted">{h.response}</td>
-                  <td className="muted">{h.boss} · {h.instance}</td>
-                  <td className="muted">{h.ts ? relTime(h.ts) : ""}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
 
 
     </div>
