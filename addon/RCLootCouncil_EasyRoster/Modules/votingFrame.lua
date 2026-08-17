@@ -177,61 +177,79 @@ local specs = {
 	},
 }
 
+--- Добавить/убрать колонки по текущим опциям (Column API ≥ 3.23 — на лету; иначе только при загрузке)
+function VF:ApplyColumns()
+	local wantMain = ER:GetOpt("showColumn")
+	local wantAlt = wantMain and ER:GetOpt("showAltColumns")
+	if RCVotingFrame.AddColumn and RCVotingFrame.GetColumnIndex then
+		local after = "diff"
+		local changed = false
+		for _, spec in ipairs(specs) do
+			local want = spec.alt and wantAlt or (not spec.alt and wantMain)
+			local present = RCVotingFrame:GetColumnIndex(spec.colName)
+			if want and not present then
+				local s = CopyTable(spec)
+				s.alt = nil
+				local ok, err = pcall(RCVotingFrame.AddColumn, RCVotingFrame, s, after, "after")
+				if not ok then ER:Print("не удалось добавить колонку " .. spec.colName .. ": " .. tostring(err)) end
+				changed = true
+			elseif not want and present then
+				if RCVotingFrame.RemoveColumn then
+					pcall(RCVotingFrame.RemoveColumn, RCVotingFrame, spec.colName)
+					changed = true
+				else
+					ER:Print("скрытие колонки применится после /reload")
+				end
+			end
+			if want then after = spec.colName end
+		end
+		if changed and RCVotingFrame.RefreshColumnLayout then pcall(RCVotingFrame.RefreshColumnLayout, RCVotingFrame) end
+		return true
+	end
+	return false
+end
+
 function VF:OnInitialize()
 	if not RCVotingFrame.scrollCols then
 		return self:ScheduleTimer("OnInitialize", 0.5)
 	end
-	if not ER:GetOpt("showColumn") then return end
 	self:RegisterMessage("RCSessionChangedPre", "OnSessionChanged")
+	if not ER:GetOpt("showColumn") then return end
 	local showAlt = ER:GetOpt("showAltColumns")
 
-	if RCVotingFrame.AddColumn and RCVotingFrame.GetColumnIndex then
-		-- RCLootCouncil ≥ 3.23: официальный Column API — каждую следующую колонку ставим после предыдущей
-		local after = "diff"
-		for _, spec in ipairs(specs) do
-			if not spec.alt or showAlt then
-				if not RCVotingFrame:GetColumnIndex(spec.colName) then
-					local s = CopyTable(spec)
-					s.alt = nil
-					local ok, err = pcall(RCVotingFrame.AddColumn, RCVotingFrame, s, after, "after")
-					if not ok then ER:Print("не удалось добавить колонку " .. spec.colName .. ": " .. tostring(err)) end
-				end
-				after = spec.colName
+	if self:ApplyColumns() then return end
+
+	-- Старый способ: вставка в scrollCols с пересчётом sortnext (как в RCLootCouncil_wowaudit)
+	local sortnext = {}
+	for _, v in ipairs(RCVotingFrame.scrollCols) do
+		if v.sortnext and type(v.sortnext) == "number" and RCVotingFrame.scrollCols[v.sortnext] then
+			sortnext[v.colName] = RCVotingFrame.scrollCols[v.sortnext].colName
+		end
+	end
+	local pos = 8
+	for _, spec in ipairs(specs) do
+		if not spec.alt or showAlt then
+			local legacy = CopyTable(spec)
+			legacy.alt = nil
+			local nextName = legacy.sortnext
+			legacy.sortnext = nil
+			tinsert(RCVotingFrame.scrollCols, pos, legacy)
+			sortnext[spec.colName] = nextName
+			pos = pos + 1
+		end
+	end
+	for _, col in ipairs(RCVotingFrame.scrollCols) do
+		local target = sortnext[col.colName]
+		if target then
+			for j, c2 in ipairs(RCVotingFrame.scrollCols) do
+				if c2.colName == target then col.sortnext = j end
 			end
 		end
-	else
-		-- Старый способ: вставка в scrollCols с пересчётом sortnext (как в RCLootCouncil_wowaudit)
-		local sortnext = {}
-		for _, v in ipairs(RCVotingFrame.scrollCols) do
-			if v.sortnext and type(v.sortnext) == "number" and RCVotingFrame.scrollCols[v.sortnext] then
-				sortnext[v.colName] = RCVotingFrame.scrollCols[v.sortnext].colName
-			end
-		end
-		local pos = 8
-		for _, spec in ipairs(specs) do
-			if not spec.alt or showAlt then
-				local legacy = CopyTable(spec)
-				legacy.alt = nil
-				local nextName = legacy.sortnext
-				legacy.sortnext = nil
-				tinsert(RCVotingFrame.scrollCols, pos, legacy)
-				sortnext[spec.colName] = nextName
-				pos = pos + 1
-			end
-		end
-		for _, col in ipairs(RCVotingFrame.scrollCols) do
-			local target = sortnext[col.colName]
-			if target then
-				for j, c2 in ipairs(RCVotingFrame.scrollCols) do
-					if c2.colName == target then col.sortnext = j end
-				end
-			end
-		end
-		local frame = RCVotingFrame:GetFrame()
-		if frame and frame.st then
-			frame.st:SetDisplayCols(RCVotingFrame.scrollCols)
-			frame:SetWidth(frame.st.frame:GetWidth() + 20)
-		end
+	end
+	local frame = RCVotingFrame:GetFrame()
+	if frame and frame.st then
+		frame.st:SetDisplayCols(RCVotingFrame.scrollCols)
+		frame:SetWidth(frame.st.frame:GetWidth() + 20)
 	end
 end
 

@@ -10,6 +10,7 @@ import { BisPage } from "./pages/BisPage";
 import { TierPage } from "./pages/TierPage";
 import { CharacterPage } from "./pages/CharacterPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { HealthBar } from "./components/HealthBar";
 
 export function App() {
   return (
@@ -88,6 +89,7 @@ function Shell() {
         <div className="sidebar-diff">
           <DifficultySwitch />
         </div>
+        <HealthBar />
         <div className="foot">
           {config?.guild.name} — {config?.guild.realmName} ({config?.region.toUpperCase()})
           <div>

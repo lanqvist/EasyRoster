@@ -35,7 +35,7 @@ export function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export function ManualRules({ specId, characterId, onChange }: { specId: number; characterId: number; onChange: () => void }) {
-  const [rules, setRules] = useState<Array<{ id: number; characterId: number | null; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null }>>([]);
+  const [rules, setRules] = useState<Awaited<ReturnType<typeof api.bisManualList>>>([]);
   const load = () => api.bisManualList(specId, characterId).then(setRules).catch(() => undefined);
   useEffect(() => {
     void load();
@@ -44,10 +44,14 @@ export function ManualRules({ specId, characterId, onChange }: { specId: number;
   if (rules.length === 0) return null;
   return (
     <div style={{ marginTop: 10 }}>
-      <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Ручные правки</div>
+      <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 4 }}>Ручные правки BiS-листа</div>
       {rules.map((r) => (
         <div key={r.id} className="row" style={{ fontSize: 12, gap: 8 }}>
-          <span>{r.action === "pin" ? "📌" : "✕"} {EQUIP_SLOT_NAMES_RU[r.slot] ?? r.slot} · #{r.itemId}{r.characterId === null ? " (вся спека)" : ""}</span>
+          <span>
+            {r.action === "pin" ? "📌 закреплён" : "✕ исключён"} · {EQUIP_SLOT_NAMES_RU[r.slot] ?? SLOT_NAMES_RU[r.slot] ?? r.slot} ·{" "}
+            <ItemLink itemId={r.itemId} name={r.itemName ?? `#${r.itemId}`} icon={r.icon} quality={r.quality} size={16} />
+            {r.characterId === null ? " (вся спека)" : ""}
+          </span>
           <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
         </div>
       ))}

@@ -159,6 +159,8 @@ export interface BisTeamRow {
   perSlot: Record<string, ObtainedStatus | "none">;
   /** лучший кандидат слота: % сима (для выбранной сложности) и название — для тепловой карты */
   perSlotBest: Record<string, { pct: number | null; name: string; obtained: ObtainedStatus; kind?: SourceKind } | null>;
+  /** надето в слоте: ilvl и трек (для сравнения в раскрытой карточке) */
+  perSlotEquipped: Record<string, Array<{ ilvl: number | null; track: string | null }>>;
   /** потенциал апгрейда (только при персональном симе): сумма лучших положительных % по слотам, разбивка по источнику лучшего предмета */
   potential: { total: number; raid: number; mplus: number; slotsRaid: number; slotsMplus: number; slots: number } | null;
   hasSim: boolean;
@@ -190,6 +192,8 @@ export interface ItemWanter {
   simByTrack?: Record<string, number> | null;
   alt?: BisAlternatives | null;
   sourceKind?: SourceKind;
+  /** тир: сколько частей надето, закроет ли эта часть 2pc/4pc, ценность бонусов из сима */
+  tier?: { pieces: number; closes: 0 | 2 | 4; val4: number | null; val2: number | null } | null;
 }
 
 /**

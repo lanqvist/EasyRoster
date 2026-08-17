@@ -7,6 +7,7 @@ import { BisService } from "./services/bis/service.js";
 import { WowIntegrationService } from "./services/wow-integration.js";
 import { SimService } from "./services/sim/service.js";
 import { TierService } from "./services/tier.js";
+import type { CharacterRow } from "@easyroster/core";
 
 export interface Logger {
   info: (m: string) => void;
@@ -87,10 +88,12 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   };
   const tier = new TierService(db, config, staticData, sync.repo, bis);
   sim.tierPiecesOf = (c) => tier.progress(c).pieces;
-  wow.tierProvider = (c) => {
+  const tierProvider = (c: CharacterRow) => {
     const p = tier.progress(c);
     const r = tier.rows().find((x) => x.characterId === c.id);
     return { pieces: p.pieces, val4: r?.val4 ?? null, val2: r?.val2 ?? null };
   };
+  wow.tierProvider = tierProvider;
+  bis.tierProvider = tierProvider;
   return { config, db, sync, staticData, items, bis, wow, sim, tier, log };
 }

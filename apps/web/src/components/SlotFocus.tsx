@@ -20,6 +20,7 @@ function shortSource(e: BisEntry): string {
   const enc = use[0]?.encounterName ?? "";
   const kind = KIND_LABEL[e.sourceKind];
   if (e.sourceKind === "catalyst") return `Катализатор${enc ? ` ← ${enc}` : ""}`;
+  if (e.isTier && e.sourceKind === "raid") return `Тир ← токен: ${enc || "рейд"}`;
   return enc ? `${kind} · ${enc}` : kind;
 }
 

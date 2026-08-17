@@ -38,6 +38,10 @@ export function LootBrowse() {
   const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
   const [selChar, setSelChar] = useState<number | null>(null);
   const [onlyNeeded, setOnlyNeeded] = useState(false);
+  const [rosterSpecs, setRosterSpecs] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    api.characters(false).then((cs) => setRosterSpecs(new Set(cs.filter((c) => c.inRaidRoster && c.activeSpecId).map((c) => c.activeSpecId!)))).catch(() => undefined);
+  }, []);
 
   const load = async () => {
     try {
@@ -140,6 +144,13 @@ export function LootBrowse() {
           <div className="row" style={{ marginBottom: 10 }}>
             <select value={filterSpec} onChange={(e) => setFilterSpec(e.target.value === "" ? "" : Number(e.target.value))}>
               <option value="">Все классы/спеки</option>
+              {rosterSpecs.size > 0 && (
+                <optgroup label="Спеки ростера">
+                  {SPECS.filter((sp) => rosterSpecs.has(sp.id)).map((sp) => (
+                    <option key={`r${sp.id}`} value={sp.id}>{className(sp.classId)} — {sp.name}</option>
+                  ))}
+                </optgroup>
+              )}
               {[...specsByClass.entries()].map(([classId, specs]) => (
                 <optgroup key={classId} label={className(classId)}>
                   {specs.map((s) => (

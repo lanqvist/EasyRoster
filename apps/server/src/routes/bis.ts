@@ -87,7 +87,11 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
 
   app.get("/api/bis/manual", async (req) => {
     const q = z.object({ specId: z.coerce.number().int(), characterId: z.coerce.number().int().optional() }).parse(req.query);
-    return ctx.bis.repo.manualRules(q.specId, q.characterId ?? null);
+    // + название предмета для UI
+    return ctx.bis.repo.manualRules(q.specId, q.characterId ?? null).map((r) => {
+      const it = ctx.staticData.item(r.itemId);
+      return { ...r, itemName: it ? (it.nameRu ?? it.name) : null, icon: it?.icon ?? null, quality: it?.quality ?? null };
+    });
   });
 
   app.post("/api/bis/manual", async (req) => {

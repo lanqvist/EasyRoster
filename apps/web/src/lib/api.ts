@@ -64,7 +64,7 @@ export const api = {
     request<{ id: number }>("/api/bis/manual", { method: "POST", body: JSON.stringify(body) }),
   bisManualDelete: (id: number) => request<{ ok: true }>(`/api/bis/manual/${id}`, { method: "DELETE" }),
   bisManualList: (specId: number, characterId?: number) =>
-    request<Array<{ id: number; characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null }>>(
+    request<Array<{ id: number; characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note: string | null; itemName: string | null; icon: string | null; quality: number | null }>>(
       `/api/bis/manual?specId=${specId}${characterId ? `&characterId=${characterId}` : ""}`,
     ),
   wowStatus: () => request<AddonStatus>("/api/wow/status"),

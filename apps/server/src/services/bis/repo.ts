@@ -20,7 +20,9 @@ export class BisRepo {
     const c = this.db.conn;
     c.exec("BEGIN");
     try {
-      c.prepare("DELETE FROM bis_candidates WHERE source = ? AND spec_id = ? AND character_id IS ?").run(source, specId, characterId);
+      // персональные источники: у персонажа одна актуальная спека — старые строки другой спеки (после смены спеки) удаляем тоже
+      if (characterId !== null) c.prepare("DELETE FROM bis_candidates WHERE source = ? AND character_id = ?").run(source, characterId);
+      else c.prepare("DELETE FROM bis_candidates WHERE source = ? AND spec_id = ? AND character_id IS NULL").run(source, specId);
       const ins = c.prepare(`
         INSERT INTO bis_candidates(source, spec_id, character_id, list, slot, rank, item_id, bonus_ids, original_item_id, item_name, source_note, score, fetched_at, meta)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -15,6 +15,7 @@ function shortSource(e: BisEntry): string {
   const use = good.length ? good : e.drops.filter((d) => !/catalyst|катализ/i.test(d.instanceName));
   const enc = [...new Set(use.map((d) => d.encounterName))].slice(0, 2).join(", ");
   if (e.sourceKind === "catalyst") return `Катализатор${enc ? ` ← ${enc}` : ""}`;
+  if (e.isTier && e.sourceKind === "raid") return `Тир ← токен: ${enc || "рейд"}`;
   return enc ? `${KIND_LABEL[e.sourceKind]} · ${enc}` : KIND_LABEL[e.sourceKind];
 }
 
@@ -44,6 +45,7 @@ function CandidateCard({ e, ru, onPin, onExclude, bySim }: { e: BisEntry; ru: bo
         <div className="cand-meta muted">
           {KIND_ICON[e.sourceKind]} {shortSource(e)}
           {dt ? ` · ${TRACK_NAMES_RU[dt.name] ?? dt.name}${dt.ilvl ? ` ${dt.ilvl}` : ""}` : ""}
+          {dt?.ilvl && e.equippedBest?.ilvl ? <span style={{ color: dt.ilvl - e.equippedBest.ilvl > 0 ? "var(--ok)" : "var(--text-muted)" }} title="разница ilvl к лучшему надетому в слоте"> ({dt.ilvl - e.equippedBest.ilvl > 0 ? "+" : ""}{dt.ilvl - e.equippedBest.ilvl} ilvl)</span> : null}
           {e.bisTrack && e.bisTrack.name !== dt?.name ? ` · BiS на ${TRACK_NAMES_RU[e.bisTrack.name] ?? e.bisTrack.name}` : ""}
         </div>
         {a?.byKind && e.rank <= 2 ? (

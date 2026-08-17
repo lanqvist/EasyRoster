@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { BIS_SLOT_ORDER, SLOT_NAMES_RU, type BisTeamRow } from "@easyroster/core";
 import { classColor, relTime, ROLE_RU, specName } from "../lib/format";
-import { OBTAINED_STYLE } from "./BisSlotList";
+import { OBTAINED_STYLE, ObtainedLegend } from "./BisSlotList";
+import { KIND_LABEL } from "./SourceChips";
 import { ClassIcon } from "./ClassIcon";
 import { SimNowButton } from "./SimNowButton";
 
@@ -68,7 +69,7 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
             const isOpen = !!open[r.characterId];
             const cov = r.coverage;
             return (
-              <div key={r.characterId} className={`bis-card${isOpen ? " active" : ""}`} onClick={() => setOpen({ ...open, [r.characterId]: !isOpen })}>
+              <div key={r.characterId} className={`bis-card${isOpen ? " active" : ""}`} title="клик — детали по слотам; «карточка» — полная карточка персонажа" onClick={() => setOpen({ ...open, [r.characterId]: !isOpen })}>
                 <div className="bis-card-row">
                   <div className="bis-card-who">
                     <div style={{ fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -128,7 +129,11 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
                       return (
                         <div key={s} className="bis-detail-row" style={{ borderLeftColor: style?.color ?? "var(--border)" }}>
                           <span className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", width: 86, flex: "none" }}>{SLOT_NAMES_RU[s]}</span>
-                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" }}>{best?.name ?? <span className="muted">нет кандидатов</span>}</span>
+                          <span className="muted num" style={{ width: 92, flex: "none", fontSize: 11 }} title="надето сейчас">
+                            {(r.perSlotEquipped[s] ?? []).map((eq) => `${eq.ilvl ?? "?"}${eq.track ? ` ${eq.track.replace(/^(\w)\w*/, "$1")}` : ""}`).join(" / ") || "—"}
+                          </span>
+                          <span className="muted" style={{ flex: "none" }}>→</span>
+                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" }}>{best?.name ?? <span className="muted">нет кандидатов</span>}{best?.kind ? <span className="muted" style={{ fontSize: 10 }}> · {KIND_LABEL[best.kind]}</span> : null}</span>
                           <span className="num" style={{ width: 60, textAlign: "right", fontWeight: 600, color: best?.pct != null ? (best.pct > 0.05 ? "var(--ok)" : "var(--text-muted)") : "var(--text-muted)" }}>
                             {best?.pct != null ? `${best.pct > 0 ? "+" : ""}${best.pct.toFixed(1)}%` : ""}
                           </span>
@@ -143,15 +148,7 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
           })}
         </div>
       )}
-      <div className="muted row" style={{ fontSize: 11, marginTop: 8, gap: 14 }}>
-        {(["yes", "lower", "catalyst", "no"] as const).map((k) => (
-          <span key={k}>
-            <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: OBTAINED_STYLE[k].color, marginRight: 4 }} />
-            {OBTAINED_STYLE[k].label}
-          </span>
-        ))}
-        <span>клик по карточке — детали по слотам</span>
-      </div>
+      <div style={{ marginTop: 8 }}><ObtainedLegend extra={<span>полоса — статус лучшего кандидата по слотам · клик по карточке — детали по слотам</span>} /></div>
     </div>
   );
 }

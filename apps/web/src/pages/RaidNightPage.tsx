@@ -102,6 +102,12 @@ export function LootNight() {
     const list = selectedItem ? [...(wanters[selectedItem.id] ?? [])] : [];
     return list.sort(SORTERS[sortMode]);
   }, [selectedItem, wanters, sortMode]);
+  // на широких экранах сразу раскрываем «надето → выпало → лучше» для первого претендента
+  useEffect(() => {
+    if (!selectedItem) { setFocus(null); return; }
+    if (window.innerWidth >= 1500 && sel[0]) setFocus({ characterId: sel[0].characterId, slot: sel[0].slot });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItem]);
 
   return (
     <div className="loot-page">
@@ -236,6 +242,13 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
           {SLOT_NAMES_RU[w.slot] ?? w.slot} · #{w.rank} в слоте · <span style={{ color: st.color }}>{st.label}</span>
           {w.obtainedDetail ? ` — ${w.obtainedDetail}` : ""}
           {w.equippedIlvl && !w.obtainedDetail ? ` · надето ${w.equippedIlvl}` : ""}
+          {w.tier && (
+            <span title={`тир: надето ${w.tier.pieces}/5${w.tier.val2 != null ? ` · 2pc = ${w.tier.val2 > 0 ? "+" : ""}${w.tier.val2.toFixed(1)}%` : ""}${w.tier.val4 != null ? ` · 4pc = ${w.tier.val4 > 0 ? "+" : ""}${w.tier.val4.toFixed(1)}%` : ""}`}>
+              {" · "}тир {w.tier.pieces}→{Math.min(5, w.tier.pieces + 1)}/5
+              {w.tier.closes === 4 && <b style={{ color: "var(--ok)" }}> закроет 4pc{w.tier.val4 != null ? ` (+${w.tier.val4.toFixed(1)}%)` : ""}</b>}
+              {w.tier.closes === 2 && <b style={{ color: "var(--warn)" }}> закроет 2pc{w.tier.val2 != null ? ` (+${w.tier.val2.toFixed(1)}%)` : ""}</b>}
+            </span>
+          )}
         </div>
         {w.alt?.byKind ? (
           <AltKinds byKind={w.alt.byKind} own={pct} />

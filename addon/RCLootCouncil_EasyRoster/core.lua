@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.5.0"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.6.0"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -366,12 +366,12 @@ local optionsTable = {
 		showColumn = {
 			type = "toggle", order = 1, name = "Колонка BiS в окне голосования", width = "full",
 			get = function() return ER:GetOpt("showColumn") end,
-			set = function(_, v) ER:SetOpt("showColumn", v); ER:Print("изменение колонки применится после /reload") end,
+			set = function(_, v) ER:SetOpt("showColumn", v); ER:ApplyColumnsOrHint() end,
 		},
 		showAltColumns = {
 			type = "toggle", order = 1.5, name = "Колонки «Альт M+» и «Альт рейд» (лучшая альтернатива из ключей / с другого босса и насколько выпавшее лучше)", width = "full",
 			get = function() return ER:GetOpt("showAltColumns") end,
-			set = function(_, v) ER:SetOpt("showAltColumns", v); ER:Print("изменение колонок применится после /reload") end,
+			set = function(_, v) ER:SetOpt("showAltColumns", v); ER:ApplyColumnsOrHint() end,
 		},
 		showLootFrame = {
 			type = "toggle", order = 2, name = "Подсказка в окне ролла", width = "full",
@@ -400,6 +400,17 @@ local optionsTable = {
 		},
 	},
 }
+
+--- Применить опции колонок на лету (RCLC ≥ 3.23), иначе подсказать /reload
+function ER:ApplyColumnsOrHint()
+	local vf = self:GetModule("EasyRosterVotingFrame", true)
+	if vf and vf.ApplyColumns and vf:ApplyColumns() then
+		local rc = addon:GetActiveModule("votingframe")
+		if rc and rc.Update then rc:Update(true) end
+	else
+		self:Print("изменение колонок применится после /reload")
+	end
+end
 
 function ER:OnInitialize()
 	if not addon.optionsFrame then

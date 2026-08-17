@@ -18,12 +18,23 @@ const STATUS_RU: Record<CharacterRow["profileStatus"], { text: string; color: st
   error: { text: "ошибка", color: "var(--bad)" },
 };
 
+/** Профиль устарел: нет данных или последний логаут > 14 дней назад. */
+function isStale(r: CharacterRow): boolean {
+  return r.profileStatus !== "ok" || (r.lastLoginMs != null && Date.now() - r.lastLoginMs > 14 * 86400000);
+}
+
 export function RosterPage() {
   const { config } = useConfig();
   const [rows, setRows] = useState<CharacterRow[]>([]);
   const [showAll, setShowAll] = useState(false);
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "rank", dir: 1 });
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>(() => {
+    try { return JSON.parse(localStorage.getItem("easyroster.rosterSort") ?? "") as { key: SortKey; dir: 1 | -1 }; } catch { return { key: "rank", dir: 1 }; }
+  });
+  useEffect(() => localStorage.setItem("easyroster.rosterSort", JSON.stringify(sort)), [sort]);
   const [filter, setFilter] = useState("");
+  const [roleF, setRoleF] = useState<"" | "TANK" | "HEALER" | "DAMAGER">("");
+  const [rankF, setRankF] = useState<string>("");
+  const [staleOnly, setStaleOnly] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [importingRanks, setImportingRanks] = useState(false);
@@ -61,7 +72,13 @@ export function RosterPage() {
 
   const visible = useMemo(() => {
     const f = filter.trim().toLowerCase();
-    const list = rows.filter((r) => !f || r.name.toLowerCase().includes(f) || className(r.classId).toLowerCase().includes(f));
+    const list = rows.filter(
+      (r) =>
+        (!f || r.name.toLowerCase().includes(f) || className(r.classId).toLowerCase().includes(f) || (r.realmName ?? "").toLowerCase().includes(f) || (r.activeSpecId ? specName(r.activeSpecId).toLowerCase().includes(f) : false)) &&
+        (!roleF || roleOf(r.activeSpecId) === roleF) &&
+        (rankF === "" || String(r.rank) === rankF) &&
+        (!staleOnly || isStale(r)),
+    );
     const cmp: Record<SortKey, (a: CharacterRow, b: CharacterRow) => number> = {
       name: (a, b) => a.name.localeCompare(b.name, "ru"),
       rank: (a, b) => a.rank - b.rank || a.name.localeCompare(b.name, "ru"),
@@ -70,8 +87,11 @@ export function RosterPage() {
       login: (a, b) => (b.lastLoginMs ?? 0) - (a.lastLoginMs ?? 0),
       role: (a, b) => (roleOf(a.activeSpecId) ?? "Z").localeCompare(roleOf(b.activeSpecId) ?? "Z"),
     };
-    return list.sort((a, b) => cmp[sort.key](a, b) * sort.dir);
-  }, [rows, filter, sort]);
+    // устаревшие профили — всегда вниз внутри выбранной сортировки
+    return list.sort((a, b) => Number(isStale(a)) - Number(isStale(b)) || cmp[sort.key](a, b) * sort.dir);
+  }, [rows, filter, sort, roleF, rankF, staleOnly]);
+  const ranksPresent = useMemo(() => [...new Set(rows.map((r) => r.rank))].sort((a, b) => a - b), [rows]);
+  const staleCount = useMemo(() => rows.filter((r) => r.inRaidRoster && isStale(r)).length, [rows]);
 
   const th = (key: SortKey, label: string, cls?: string) => (
     <th
@@ -103,10 +123,27 @@ export function RosterPage() {
 
       <div className="row" style={{ marginBottom: 12, justifyContent: "space-between" }}>
         <div className="row">
-          <input placeholder="Поиск по имени/классу" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ width: 240 }} />
+          <input placeholder="Поиск: имя / класс / спека / реалм" value={filter} onChange={(e) => setFilter(e.target.value)} style={{ width: 240 }} />
+          <select value={roleF} onChange={(e) => setRoleF(e.target.value as typeof roleF)}>
+            <option value="">Все роли</option>
+            <option value="TANK">Танки</option>
+            <option value="HEALER">Хилы</option>
+            <option value="DAMAGER">ДД</option>
+          </select>
+          <select value={rankF} onChange={(e) => setRankF(e.target.value)}>
+            <option value="">Все ранги</option>
+            {ranksPresent.map((rk) => (
+              <option key={rk} value={String(rk)}>{rankLabel(rk)} ({rk}){config?.raiderRanks.includes(rk) ? " · рейдовый" : ""}</option>
+            ))}
+          </select>
           <label className="row" style={{ gap: 6 }}>
             <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} /> вся гильдия
           </label>
+          {staleCount > 0 && (
+            <label className="row" style={{ gap: 6 }} title="нет данных профиля или не заходили в игру > 14 дней (Blizzard API отдаёт профиль только после логаута)">
+              <input type="checkbox" checked={staleOnly} onChange={(e) => setStaleOnly(e.target.checked)} /> <span style={{ color: "var(--warn)" }}>устаревшие ({staleCount})</span>
+            </label>
+          )}
         </div>
         <div className="muted" style={{ fontSize: 13 }}>
           Рейдеров: <b className="num">{stats.raiders}</b> · средний ilvl <b className="num">{stats.avg ? stats.avg.toFixed(1) : "—"}</b> ·{" "}
@@ -151,6 +188,7 @@ export function RosterPage() {
                     <td>
                       <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                       <span className="muted"> — {r.realmName || r.realmSlug}</span>
+                      {isStale(r) && r.inRaidRoster && <span className="badge-warn" title={r.profileStatus !== "ok" ? `профиль: ${STATUS_RU[r.profileStatus].text}` : `не заходил ${relTime(r.lastLoginMs)} — экипировка/спека могли измениться`}>устарел</span>}
                       <Link to={`/character/${r.id}`} className="muted" style={{ marginLeft: 6, fontSize: 11 }} title="Открыть страницу персонажа" onClick={(e) => e.stopPropagation()}>↗</Link>
                     </td>
                     <td>

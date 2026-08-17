@@ -16,6 +16,10 @@ import { DroptimizerBox, ManualRules, RaidSpecBox, SimBox, SimResults } from "./
  * «Обзор» (надето ↔ BiS по слотам) / «Сим» / «Настройки персонажа».
  * Используется и на странице /character/:id, и в выезжающей панели.
  */
+function SubHead({ children }: { children: React.ReactNode }) {
+  return <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", margin: "12px 0 6px" }}>{children}</div>;
+}
+
 export function CharacterView({ id, onClose, layout = "page" }: { id: number; onClose?: () => void; layout?: "page" | "drawer" }) {
   const { config } = useConfig();
   const { difficulty } = useDifficulty();
@@ -38,6 +42,9 @@ export function CharacterView({ id, onClose, layout = "page" }: { id: number; on
 
   const manual = async (e: BisEntry, action: "pin" | "exclude") => {
     if (!bis) return;
+    if (action === "exclude" && !window.confirm(`Убрать «${(ru && e.itemNameRu) || e.itemName}» из BiS-листа слота для этого персонажа?
+
+Отменить можно во вкладке «Спека / таланты / правила» → «Ручные правки».`)) return;
     await api.bisManualAdd({ characterId: id, specId: bis.specId, slot: e.slot, itemId: e.itemId, action });
     await loadBis();
   };
@@ -122,7 +129,9 @@ export function CharacterView({ id, onClose, layout = "page" }: { id: number; on
       {tab === "sim" && <SimResults characterId={id} locale={config?.locale ?? "ru_RU"} onChanged={loadBis} />}
       {tab === "settings" && (
         <>
+          <SubHead>Рейдовая спека и таланты</SubHead>
           <RaidSpecBox character={c} onSaved={() => { void load(); void loadBis(); }} />
+          <SubHead>Персональный сим</SubHead>
           <div className="row" style={{ marginBottom: 8 }}>
             <SimBox characterId={id} onDone={loadBis} />
           </div>

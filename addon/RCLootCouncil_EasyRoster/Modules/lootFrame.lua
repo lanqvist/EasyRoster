@@ -36,7 +36,9 @@ function LF.HookEntryUpdate(_, entry)
 	if not me then return end
 	local e = ER:GetEntry(itemID, me)
 	if e then
-		entry.itemLvl:SetText(text .. "  " .. ER.COLOR .. "ER|r " .. (ER:FormatEntry(e) or ""))
+		-- % для трека именно выпавшего предмета (по bonusID ссылки), а не лучшего трека
+		local track = ER:TrackOfLink(lt[session].link or entry.item.link)
+		entry.itemLvl:SetText(text .. "  " .. ER.COLOR .. "ER|r " .. (ER:FormatEntry(e, track) or ""))
 	elseif ER:HasData() then
 		entry.itemLvl:SetText(text .. "  " .. ER.COLOR .. "ER|r |cff5a5d6aне в BiS|r")
 	end

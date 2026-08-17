@@ -5,12 +5,34 @@ import { FIGHT_STYLE_RU } from "../lib/format";
 import { TRACK_NAMES_RU } from "@easyroster/core";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
 
+function pickSim(config: NonNullable<ReturnType<typeof useConfig>["config"]>) {
+  const c = config.sim;
+  return { enabled: c.enabled, autoAfterSync: c.autoAfterSync, fightStyle: c.fightStyle, targetError: c.targetError, threads: c.threads, raidTracks: c.raidTracks, dungeonTracks: c.dungeonTracks, tankWeights: c.tankWeights, maxAgeDays: c.maxAgeDays, simcPath: c.simcPath ?? "", tierSetName: c.tierSetName ?? "", talentsSource: c.talentsSource };
+}
+
 export function SettingsPage() {
   const { config, save } = useConfig();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [tab, setTab] = useState<string>(() => localStorage.getItem("easyroster.settingsTab") ?? "guild");
   useEffect(() => localStorage.setItem("easyroster.settingsTab", tab), [tab]);
   const [busy, setBusy] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!config) return;
+    const same =
+      JSON.stringify(ranks) === JSON.stringify(config.raiderRanks) &&
+      JSON.stringify(labels) === JSON.stringify(config.rankLabels) &&
+      wowPath === (config.wowRetailPath ?? "") &&
+      interval === config.sync.intervalMinutes &&
+      guidesDays === config.sync.guidesRefreshDays &&
+      autoExport === config.sync.autoExportLua &&
+      bnetId === (config.blizzard.clientId ?? "") &&
+      wclId === (config.warcraftLogs.clientId ?? "") &&
+      bnetSecret === "" &&
+      wclSecret === "" &&
+      JSON.stringify(sim) === JSON.stringify({ ...sim, ...pickSim(config) });
+    setDirty(!same);
+  });
 
   const [ranks, setRanks] = useState<number[]>(config?.raiderRanks ?? []);
   const [labels, setLabels] = useState<Record<string, string>>(config?.rankLabels ?? {});
@@ -94,6 +116,7 @@ export function SettingsPage() {
 
       <div className="card" style={show("keys")}>
         <h2>Ключи API</h2>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Ключи хранятся локально в <code>data/config.json</code> в открытом виде — не передавайте папку <code>data</code> третьим лицам.</div>
         <div className="grid-2">
           <div className="field">
             <label>Blizzard client ID</label>
@@ -115,7 +138,7 @@ export function SettingsPage() {
               <a href="https://www.warcraftlogs.com/api/clients" target="_blank" rel="noreferrer">
                 warcraftlogs.com/api/clients
               </a>{" "}
-              — понадобится в фазе 3 (BiS по логам).
+              — популярность предметов у топ-парсов Mythic (второй источник BiS кроме гайдов). Без ключей источник просто не используется.
             </span>
           </div>
           <div className="field">
@@ -215,7 +238,7 @@ export function SettingsPage() {
       </div>
 
       <div className="card" style={show("local")}>
-        <h2>Локально</h2>
+        <h2>Синхронизация и локальные пути</h2>
         <div className="grid-2">
           <div className="field">
             <label>Путь к _retail_</label>
@@ -239,9 +262,12 @@ export function SettingsPage() {
       </div>
 
       {tab !== "wow" && (
-        <button className="primary" disabled={busy} onClick={submit}>
-          {busy ? "Сохраняю…" : "Сохранить"}
-        </button>
+        <div className="row" style={{ gap: 10 }}>
+          <button className={dirty ? "primary" : undefined} disabled={busy || !dirty} onClick={submit}>
+            {busy ? "Сохраняю…" : dirty ? "Сохранить изменения" : "Сохранено"}
+          </button>
+          {dirty && <span className="muted" style={{ fontSize: 12, color: "var(--warn)" }}>есть несохранённые изменения (на всех вкладках, кроме «Интеграция с WoW»)</span>}
+        </div>
       )}
 
       <div style={show("wow")}>

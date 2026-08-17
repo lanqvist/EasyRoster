@@ -78,6 +78,11 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .tabs a { padding: 6px 12px; font-size: 13px; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs a:hover { color: var(--text); text-decoration: none; }
 .tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }
+.health { padding: 8px 8px 0; display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+.health-item { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.health-item:hover { text-decoration: underline; }
+.badge-warn { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-size: 10px; background: rgba(224,182,74,.18); color: var(--warn); vertical-align: middle; }
+.checklist { list-style: none; padding: 0; margin: 0 0 12px; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
 .sidebar .foot { margin-top: auto; font-size: 12px; color: var(--text-muted); padding: 0 8px; }
 .main { padding: 26px 32px; max-width: 1680px; min-width: 0; }
 .card { min-width: 0; overflow-x: auto; }

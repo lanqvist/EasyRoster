@@ -3,6 +3,26 @@ import { QUALITY_COLORS_NUM } from "../lib/format";
 import { AltLine, SourceChips } from "./SourceChips";
 import { ItemLink } from "./ItemLink";
 
+/** Единая легенда статусов «есть / ниже трек / катализатор / нет» — везде, где есть эти цвета. */
+export function ObtainedLegend({ extra }: { extra?: React.ReactNode }) {
+  return (
+    <div className="muted row" style={{ fontSize: 11, gap: 14 }}>
+      {(["yes", "lower", "catalyst", "no"] as const).map((k) => (
+        <span key={k} title={OBTAINED_TITLE[k]}>
+          <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: OBTAINED_STYLE[k].color, marginRight: 4 }} />
+          {OBTAINED_STYLE[k].label}
+        </span>
+      ))}
+      {extra}
+    </div>
+  );
+}
+export const OBTAINED_TITLE: Record<ObtainedStatus, string> = {
+  yes: "предмет надет (или выигран по истории RCLC) на максимальном треке для своего источника",
+  lower: "предмет есть, но на более низком треке/сложности — апгрейд по треку",
+  catalyst: "надет рейдовый предмет-источник — тир получается через Катализатор",
+  no: "предмета нет",
+};
 export const OBTAINED_STYLE: Record<ObtainedStatus, { color: string; label: string; bg: string }> = {
   yes: { color: "var(--ok)", label: "есть", bg: "rgba(79,191,122,.15)" },
   lower: { color: "var(--warn)", label: "есть, ниже трек", bg: "rgba(224,182,74,.15)" },

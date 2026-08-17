@@ -243,6 +243,20 @@ export class BisService {
   }
 
   /** Тип источника инстанса по сезону. */
+  private tokenMapCache: { at: number; map: Map<number, number[]> } | null = null;
+  /** itemId тир-предмета → токены (по лут-таблицам рейдов сезона) */
+  private tokenByContent(): Map<number, number[]> {
+    if (this.tokenMapCache && Date.now() - this.tokenMapCache.at < 60000) return this.tokenMapCache.map;
+    const map = new Map<number, number[]>();
+    for (const inst of this.staticData.seasonInfo().raids) {
+      for (const it of this.staticData.instanceLoot(inst.id)) {
+        if (it.contains) for (const c of it.contains) map.set(c, [...(map.get(c) ?? []), it.id]);
+      }
+    }
+    this.tokenMapCache = { at: Date.now(), map };
+    return map;
+  }
+
   sourceKindOf(instanceId: number): SourceKind {
     const s = this.config.get().season;
     if (s.dungeonInstanceIds.includes(instanceId) || instanceId === -1) return "mplus";
@@ -291,7 +305,13 @@ export class BisService {
       manual,
       equipment,
       items,
-      itemSources: (id) => this.staticData.itemSources(id),
+      itemSources: (id) => {
+        const own = this.staticData.itemSources(id);
+        if (own.length) return own;
+        // тир-предмет: источник — токен(ы) с боссов, которые его содержат
+        const tokens = this.tokenByContent().get(id);
+        return tokens ? tokens.flatMap((t) => this.staticData.itemSources(t)) : own;
+      },
       bonuses: this.staticData.getBonuses(),
       weights: cfg.bis.weights,
       perSlot: cfg.bis.perSlot,
@@ -311,6 +331,7 @@ export class BisService {
       const view = this.characterBis(c, undefined, { difficulty });
       const perSlot: Record<string, ObtainedStatus | "none"> = {};
       const perSlotBest: BisTeamRow["perSlotBest"] = {};
+      const perSlotEquipped: BisTeamRow["perSlotEquipped"] = {};
       // потенциал апгрейда: сумма лучших положительных % по слотам (только по симу), с разбивкой по источнику лучшего предмета
       let potential: BisTeamRow["potential"] = null;
       if (view?.personalSim) {
@@ -343,6 +364,7 @@ export class BisService {
           perSlot[s.slot] = best.map((b) => b.obtained).sort((a, b) => order.indexOf(b) - order.indexOf(a))[0]!;
           const top = best.find((b) => b.obtained !== "yes") ?? best[0]!;
           perSlotBest[s.slot] = { pct: top.simSelected?.pct ?? null, name: top.itemNameRu ?? top.itemName, obtained: top.obtained, kind: top.sourceKind };
+          perSlotEquipped[s.slot] = s.equipped.map((eq) => ({ ilvl: eq.ilvl, track: eq.track }));
         }
       }
       rows.push({
@@ -355,6 +377,7 @@ export class BisService {
         coverage: view?.coverage ?? null,
         potential,
         perSlot,
+        perSlotEquipped,
         perSlotBest,
         hasSim: !!view?.personalSim,
         simAt: view?.personalSim?.fetchedAt ?? null,
@@ -363,6 +386,10 @@ export class BisService {
     }
     return rows;
   }
+
+  /** Прогресс тира персонажа (устанавливается контекстом из TierService) — для «закроет 2pc/4pc» в списке претендентов. */
+  tierProvider: ((c: CharacterRow) => { pieces: number; val4: number | null; val2: number | null }) | null = null;
+  private tierCache = new Map<number, { pieces: number; val4: number | null; val2: number | null }>();
 
   /** Строка «кому нужен» из записи BiS: сим-%, разница ilvl к надетому (для хилов/без сима), альтернативы. */
   private wanterOf(c: CharacterRow, view: BisCharacterView, s: BisCharacterView["slots"][number], e: BisEntry): ItemWanter {
@@ -391,7 +418,19 @@ export class BisService {
       simByTrack: e.simByTrack,
       alt: e.alternatives,
       sourceKind: e.sourceKind,
+      tier: e.isTier && this.tierProvider ? this.tierOf(c) : null,
     };
+  }
+
+  private tierOf(c: CharacterRow): ItemWanter["tier"] {
+    let t = this.tierCache.get(c.id);
+    if (!t) {
+      t = this.tierProvider!(c);
+      this.tierCache.set(c.id, t);
+      setTimeout(() => this.tierCache.delete(c.id), 5000).unref?.();
+    }
+    const next = t.pieces + 1;
+    return { pieces: t.pieces, closes: next === 2 ? 2 : next === 4 ? 4 : 0, val4: t.val4, val2: t.val2 };
   }
 
   /** Кому из ростера нужен предмет (учитывая тир-токены и катализатор). */

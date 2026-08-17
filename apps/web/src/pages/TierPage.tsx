@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SLOT_NAMES_RU, iconUrl, type TierRow, type TierTokenView } from "@easyroster/core";
 import { api } from "../lib/api";
-import { classColor, className, relTime, specName } from "../lib/format";
+import { classColor, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { CharacterDrawer } from "../components/CharacterDrawer";
 import { ClassIcon } from "../components/ClassIcon";
 import { SimPanel } from "../components/SimPanel";
 import { SimNowButton } from "../components/SimNowButton";
+import { Link } from "react-router-dom";
+import { ROLE_RU, roleOf } from "../lib/format";
 
 const TIER_SLOT_ORDER = ["HEAD", "SHOULDER", "CHEST", "HANDS", "LEGS"];
 const SLOT_SHORT: Record<string, string> = { HEAD: "Гол", SHOULDER: "Плч", CHEST: "Грд", HANDS: "Кст", LEGS: "Ног" };
@@ -22,6 +24,8 @@ export function TierPage() {
   const [err, setErr] = useState<string | null>(null);
   const [sel, setSel] = useState<number | null>(null);
   const [sort, setSort] = useState<"priority" | "val4" | "pieces" | "name">("priority");
+  const [roleF, setRoleF] = useState<"" | "TANK" | "HEALER" | "DAMAGER">("");
+  const [simOpen, setSimOpen] = useState(false);
 
   const reload = useCallback(() => api.tier().then(setData).catch((e) => setErr((e as Error).message)), []);
   useEffect(() => {
@@ -29,7 +33,7 @@ export function TierPage() {
   }, [reload]);
 
   const rows = useMemo(() => {
-    const r = [...(data?.rows ?? [])];
+    const r = (data?.rows ?? []).filter((x) => !roleF || roleOf(x.specId) === roleF);
     const cmp: Record<typeof sort, (a: TierRow, b: TierRow) => number> = {
       priority: (a, b) => (b.priority ?? -1) - (a.priority ?? -1) || (b.val4 ?? -1) - (a.val4 ?? -1),
       val4: (a, b) => (b.val4 ?? -1) - (a.val4 ?? -1),
@@ -37,7 +41,7 @@ export function TierPage() {
       name: (a, b) => a.name.localeCompare(b.name, "ru"),
     };
     return r.sort(cmp[sort]);
-  }, [data, sort]);
+  }, [data, sort, roleF]);
 
   const max4 = Math.max(0.01, ...rows.map((r) => r.val4 ?? 0));
   const maxP = Math.max(0.01, ...rows.map((r) => r.priority ?? 0));
@@ -66,12 +70,29 @@ export function TierPage() {
     <div>
       <h1>Тир-сет</h1>
       {err && <div className="alert bad">{err}</div>}
-      <div className="muted" style={{ fontSize: 12, marginBottom: 8 }} title="Ценность 2pc/4pc — из автосима (принудительное включение/выключение сет-бонуса в текущем гире). Приоритет = 4pc × близость к 4pc (1 часть → 1.0, 2 → 0.6, 3+ → 0.3; есть 4pc → 0). ⚗ — надет катализируемый предмет в тир-слоте. Хилы без сима — только прогресс.">
-        ⓘ приоритет = ценность 4pc × близость к 4pc · ⚗ = можно катализировать · наведите для подробностей
+      <div className="card" style={{ padding: "8px 12px", marginBottom: 10, fontSize: 12 }}>
+        <div><b>Приоритет</b> = ценность 4pc (из сима: сет-бонус принудительно включён/выключен в текущем гире) × близость к 4pc: до 4pc одна часть → ×1.0, две → ×0.6, три и больше → ×0.3, 4pc уже есть → 0.</div>
+        <div className="muted row" style={{ gap: 14, marginTop: 4 }}>
+          <span>сегменты полосы: <span style={{ color: "var(--ok)" }}>■ надето</span> · <span style={{ color: "#3fb8a8" }}>■ можно катализировать (⚗ — надет рейдовый предмет в этом слоте)</span> · <span style={{ color: "var(--bad)" }}>■ нет</span></span>
+          <span>левая полоса строки: <span style={{ color: "var(--ok)" }}>4pc</span> / <span style={{ color: "var(--warn)" }}>2pc</span> / <span style={{ color: "var(--bad)" }}>&lt;2</span></span>
+          <span>хилы без сима — только прогресс, приоритет не считается</span>
+        </div>
       </div>
 
-      <SimPanel />
+      <div className="card" style={{ padding: "8px 12px", marginBottom: 10 }}>
+        <div className="row" style={{ justifyContent: "space-between", cursor: "pointer" }} onClick={() => setSimOpen((v) => !v)}>
+          <span style={{ fontSize: 13 }}><b>Автосим</b> <span className="muted" style={{ fontSize: 12 }}>— значения 2pc/4pc берутся из последнего сима; кнопка ⟳ у строки пересимит одного</span></span>
+          <button style={{ padding: "2px 10px", fontSize: 12 }}>{simOpen ? "Свернуть" : "Панель сима"}</button>
+        </div>
+        {simOpen && <div style={{ marginTop: 8 }}><SimPanel /></div>}
+      </div>
       <div className="row" style={{ marginBottom: 8, gap: 6 }}>
+        <select value={roleF} onChange={(e) => setRoleF(e.target.value as typeof roleF)}>
+          <option value="">Все роли</option>
+          <option value="TANK">{ROLE_RU.TANK}</option>
+          <option value="HEALER">{ROLE_RU.HEALER}</option>
+          <option value="DAMAGER">{ROLE_RU.DAMAGER}</option>
+        </select>
         <span className="muted" style={{ fontSize: 12 }}>Сортировка:</span>
         {(["priority", "val4", "pieces", "name"] as const).map((k) => (
           <button key={k} className={sort === k ? "primary" : undefined} style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setSort(k)}>
@@ -86,7 +107,9 @@ export function TierPage() {
             {slotSources.map((x) => (
               <span key={x.slot}>
                 <b>{SLOT_NAMES_RU[x.slot]}</b>:{" "}
-                {x.tokens.map((t) => t.encounterName).join(" / ")}
+                {x.tokens.map((t, i) => (
+                  <span key={t.tokenId}>{i ? " / " : ""}<Link to="/loot/browse" title="открыть лут-таблицы">{t.encounterName}</Link></span>
+                ))}
               </span>
             ))}
           </div>

@@ -55,7 +55,7 @@ export function WowIntegrationCard({ compact = false }: { compact?: boolean }) {
             {dot(st.lootHistoryCount > 0, `история ${st.lootHistoryCount}`, st.lastHistoryImportAt ? `импорт ${relTime(st.lastHistoryImportAt)}` : "")}
           </div>
           <div className="row" style={{ gap: 6 }}>
-            <button className="primary" style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("export", async () => { const r = await api.wowExport(); return `db.lua записан: ${r.characters} перс. — в игре /reload`; })}>
+            <button className="primary" style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => { if (st.dataTimestamp && Date.now() - st.dataTimestamp < 3600000 && !window.confirm("db.lua обновлялся меньше часа назад. Перезаписать? В игре потребуется /reload.")) return; void run("export", async () => { const r = await api.wowExport(); return `db.lua записан: ${r.characters} перс. — в игре /reload`; }); }}>
               {busy === "export" ? "…" : "Синк в игру"}
             </button>
             <button style={{ padding: "3px 10px", fontSize: 12 }} disabled={!!busy || !st.wowPathValid} onClick={() => run("hist", async () => { const r = await api.wowImportHistory(); return `История RCLC: новых ${r.added}`; })}>История</button>
@@ -66,10 +66,26 @@ export function WowIntegrationCard({ compact = false }: { compact?: boolean }) {
       </div>
     );
   }
+  const steps: Array<{ ok: boolean; text: string; hint: string }> = [
+    { ok: st.wowPathValid, text: "Путь к _retail_ задан", hint: "Настройки → Синхронизация → «Путь к _retail_»" },
+    { ok: st.rclcInstalled, text: "RCLootCouncil установлен", hint: "аддон RCLootCouncil ≥ 3.23 из CurseForge/Wago; без него плагин не загрузится" },
+    { ok: st.addonInstalled && st.addonVersion === st.addonSourceVersion, text: st.addonInstalled ? "Аддон EasyRoster установлен и актуален" : "Аддон EasyRoster установлен", hint: "кнопка «Установить/Обновить аддон» ниже, затем /reload в игре" },
+    { ok: !!st.dataTimestamp && Date.now() - st.dataTimestamp < 2 * 86400000, text: "db.lua сгенерирован и свежий", hint: "«Синк в игру (db.lua)» → /reload; дальше обновляется автоматически после синка (Настройки → Синхронизация)" },
+    { ok: st.easyRosterSavedVariables.length > 0, text: "Есть экспорт гильдии из игры (ранги/заметки)", hint: "появляется после /reload с аддоном; затем «Импорт рангов/заметок»" },
+    { ok: st.lootHistoryCount > 0, text: "История лута RCLC импортирована", hint: "«Импорт истории лута» после рейда (или автоматически при автосинке)" },
+  ];
   return (
     <div className="card">
       {!compact && <h2>Интеграция с WoW</h2>}
       {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}
+      <ol className="checklist">
+        {steps.map((x, i) => (
+          <li key={i} style={{ color: x.ok ? "var(--ok)" : "var(--text)" }} title={x.hint}>
+            <span style={{ display: "inline-block", width: 16 }}>{x.ok ? "✓" : "○"}</span> {x.text}
+            {!x.ok && <span className="muted" style={{ fontSize: 12 }}> — {x.hint}</span>}
+          </li>
+        ))}
+      </ol>
       <div className="grid-2" style={{ fontSize: 13 }}>
         <div>
           <div className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em" }}>Папка WoW</div>
