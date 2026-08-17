@@ -70,6 +70,11 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .diff-switch { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-muted); }
 .pot-bar { display: flex; height: 4px; width: 110px; background: var(--bg-elev-2); border-radius: 2px; overflow: hidden; margin: 2px 0 2px auto; }
 .pot-bar span { display: block; height: 100%; }
+/* split-button: основная кнопка + стрелка меню как единый элемент */
+.split { display: inline-flex; position: relative; }
+.split > button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.split > button.split-arrow { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(0,0,0,.28); padding: 7px 9px; font-size: 11px; }
+.split > button.split-arrow:hover { filter: brightness(1.08); }
 .menu { position: absolute; top: 100%; left: 0; z-index: 5; margin-top: 4px; min-width: 320px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.25); padding: 4px; display: flex; flex-direction: column; }
 .menu > button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: none; background: none; padding: 8px 10px; border-radius: 4px; font-size: 13px; }
 .menu > button:hover { background: var(--bg-elev-2); }
