@@ -112,7 +112,7 @@ export function RaidNightPage() {
         </label>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: focus ? "minmax(260px, 0.9fr) minmax(360px, 1.1fr) minmax(460px, 1.1fr)" : "1fr 1.4fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: focus ? "minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr)" : "minmax(0, 1fr) minmax(0, 1.4fr)", gap: 14 }}>
         <div className="card" style={{ padding: "8px 12px" }}>
           <h2 style={{ fontSize: 14 }}>{enc?.name ?? "—"}</h2>
           <table>

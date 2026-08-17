@@ -66,7 +66,8 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .nav a:hover { background: var(--bg-elev-2); text-decoration: none; }
 .nav a.active { background: var(--bg-elev-2); color: var(--accent); }
 .sidebar .foot { margin-top: auto; font-size: 12px; color: var(--text-muted); padding: 0 8px; }
-.main { padding: 26px 32px; max-width: 1200px; }
+.main { padding: 26px 32px; max-width: 1680px; min-width: 0; }
+.card { min-width: 0; overflow: hidden; }
 
 /* cards & forms */
 .card {
