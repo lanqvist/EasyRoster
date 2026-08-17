@@ -3,6 +3,7 @@ import { BIS_SLOT_ORDER, SLOT_NAMES_RU, SLOT_TO_EQUIP_SLOTS, TRACK_NAMES_RU, typ
 import { ItemIcon, ItemLink } from "./ItemLink";
 import { KIND_ICON, KIND_LABEL } from "./SourceChips";
 import { OBTAINED_STYLE } from "./BisSlotList";
+import { TrackBreakdown } from "../lib/difficulty";
 
 const QUALITY_NUM_BY_TYPE: Record<string, number> = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, ARTIFACT: 6, HEIRLOOM: 7 };
 const pctText = (v: number | null | undefined) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`);
@@ -57,6 +58,7 @@ function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; 
           {pct != null ? pctText(pct) : <span className="muted" style={{ fontSize: 13, fontWeight: 400 }}>балл {e.score}</span>}
         </div>
         <div className="cand-pct-sub" style={{ color: st.color }} title={e.obtainedDetail ?? ""}>{st.label}</div>
+        {(e.sourceKind === "raid" || e.sourceKind === "catalyst" || e.sourceKind === "world") && <div><TrackBreakdown byTrack={e.simByTrack} active={e.simSelected?.track} /></div>}
       </div>
       {(onPin || onExclude) && (
         <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: "none" }}>

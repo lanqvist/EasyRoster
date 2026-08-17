@@ -160,6 +160,7 @@ export interface ItemWanter {
   upgradePct: number | null; // из персонального сима, если есть (для выбранной сложности)
   equippedIlvl: number | null;
   simTrack?: string | null;
+  simByTrack?: Record<string, number> | null;
   alt?: BisAlternatives | null;
   sourceKind?: SourceKind;
 }

@@ -4,7 +4,8 @@ import { type BisCharacterView, type BisEntry, type CharacterDetail } from "@eas
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, relTime, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
-import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
+import { useDifficulty } from "../lib/difficulty";
+import { SimNowButton } from "./SimNowButton";
 import { SlotCompare } from "./SlotCompare";
 import { ClassIcon } from "./ClassIcon";
 import { SOURCE_LABEL } from "./BisSlotList";
@@ -89,7 +90,7 @@ export function CharacterView({ id, onClose, layout = "page" }: { id: number; on
           </div>
         </div>
         <div className="row" style={{ gap: 6, flex: "none" }}>
-          <DifficultySwitch compact />
+          <SimNowButton characterId={id} onDone={loadBis} />
           {links && (
             <span className="muted" style={{ fontSize: 12 }}>
               <a href={links.armory} target="_blank" rel="noreferrer">Армори</a> · <a href={links.rio} target="_blank" rel="noreferrer">RIO</a> · <a href={links.wcl} target="_blank" rel="noreferrer">WCL</a>

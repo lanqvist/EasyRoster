@@ -370,6 +370,7 @@ export class BisService {
             upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
             equippedIlvl: eqIlvl,
             simTrack: e.simSelected?.track ?? null,
+            simByTrack: e.simByTrack,
             alt: e.alternatives,
             sourceKind: e.sourceKind,
           });
@@ -405,7 +406,7 @@ export class BisService {
               characterId: c.id, name: c.name, realmName: c.realmName, classId: c.classId, specId: view.specId, slot: s.slot,
               rank: e.rank, score: e.score, obtained: e.obtained, obtainedDetail: e.obtainedDetail, upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
               equippedIlvl: s.equipped.length ? Math.min(...s.equipped.map((x) => x.ilvl ?? 0)) : null,
-              simTrack: e.simSelected?.track ?? null, alt: e.alternatives, sourceKind: e.sourceKind,
+              simTrack: e.simSelected?.track ?? null, simByTrack: e.simByTrack, alt: e.alternatives, sourceKind: e.sourceKind,
             });
           }
         }

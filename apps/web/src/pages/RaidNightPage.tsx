@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TRACK_NAMES_RU, SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
 import { api } from "../lib/api";
-import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
+import { DifficultySwitch, TrackBreakdown, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
 import { ItemIcon, ItemLink } from "../components/ItemLink";
 import { ClassIcon } from "../components/ClassIcon";
@@ -228,6 +228,7 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
         <div className="cand-pct-sub muted">
           {pct != null && w.simTrack ? (TRACK_NAMES_RU[w.simTrack] ?? w.simTrack) : pct == null ? "нет сима" : ""}
         </div>
+        {w.simByTrack && <TrackBreakdown byTrack={w.simByTrack} active={w.simTrack} />}
         {gap != null && pct != null && (
           <div className="cand-gap" style={{ color: gap >= 2 ? "var(--ok)" : gap >= 0.8 ? "var(--warn)" : "var(--text-muted)" }} title="Незаменимость: насколько лучше фармабельной альтернативы">
             {gap > 0.05 ? `▲${gap.toFixed(1)}` : "заменим"}

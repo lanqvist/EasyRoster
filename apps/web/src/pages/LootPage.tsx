@@ -15,7 +15,7 @@ import {
   type ItemWanter,
 } from "@easyroster/core";
 import { api } from "../lib/api";
-import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
+import { useDifficulty } from "../lib/difficulty";
 import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { ItemIcon, ItemLink } from "../components/ItemLink";
@@ -111,7 +111,6 @@ export function LootPage() {
     <div>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>Лут-таблицы — {seasonLabel}</h1>
-        <DifficultySwitch />
       </div>
       <div className="card" style={{ padding: "10px 16px" }}>
         <div className="row" style={{ justifyContent: "space-between" }}>

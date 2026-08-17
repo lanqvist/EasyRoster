@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SLOT_NAMES_RU, iconUrl, type TierRow, type TierTokenView } from "@easyroster/core";
 import { api } from "../lib/api";
 import { classColor, className, relTime, specName } from "../lib/format";
@@ -6,6 +6,7 @@ import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { CharacterDrawer } from "../components/CharacterDrawer";
 import { ClassIcon } from "../components/ClassIcon";
 import { SimPanel } from "../components/SimPanel";
+import { SimNowButton } from "../components/SimNowButton";
 
 const TIER_SLOT_ORDER = ["HEAD", "SHOULDER", "CHEST", "HANDS", "LEGS"];
 const SLOT_SHORT: Record<string, string> = { HEAD: "Гол", SHOULDER: "Плч", CHEST: "Грд", HANDS: "Кст", LEGS: "Ног" };
@@ -22,9 +23,10 @@ export function TierPage() {
   const [sel, setSel] = useState<number | null>(null);
   const [sort, setSort] = useState<"priority" | "val4" | "pieces" | "name">("priority");
 
+  const reload = useCallback(() => api.tier().then(setData).catch((e) => setErr((e as Error).message)), []);
   useEffect(() => {
-    api.tier().then(setData).catch((e) => setErr((e as Error).message));
-  }, []);
+    void reload();
+  }, [reload]);
 
   const rows = useMemo(() => {
     const r = [...(data?.rows ?? [])];
@@ -101,7 +103,10 @@ export function TierPage() {
                   <ClassIcon classId={r.classId} size={18} /><span style={{ color: classColor(r.classId), fontWeight: 700 }}>{r.name}</span>
                   <span className="muted" style={{ fontSize: 12 }}> · {specName(r.specId)}</span>
                 </div>
-                <div className="muted" style={{ fontSize: 11 }}>{r.simAt ? `сим ${relTime(r.simAt)}` : r.val4 == null ? "нет сима" : ""}</div>
+                <div className="muted row" style={{ fontSize: 11, gap: 6 }}>
+                  <span>{r.simAt ? `сим ${relTime(r.simAt)}` : r.val4 == null ? "нет сима" : ""}</span>
+                  <SimNowButton characterId={r.characterId} small onDone={reload} />
+                </div>
               </div>
               <div className="tier-bar" title={`собрано ${r.pieces}/5${r.catalyzable.length ? ` · катализируемо: ${r.catalyzable.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}${r.missing.length ? ` · нужны: ${r.missing.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}`}>
                 {TIER_SLOT_ORDER.map((sl) => (

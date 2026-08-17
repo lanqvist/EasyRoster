@@ -29,19 +29,37 @@ export function useDifficulty() {
 export function DifficultySwitch({ compact = false }: { compact?: boolean }) {
   const { difficulty, setDifficulty } = useDifficulty();
   return (
-    <span className="row" style={{ gap: 4 }} title="Сложность рейда: определяет трек/ilvl и % сима для рейдовых предметов">
-      {!compact && <span className="muted" style={{ fontSize: 12 }}>Рейд:</span>}
-      {(["normal", "heroic", "mythic"] as RaidDifficulty[]).map((d) => (
-        <button
-          key={d}
-          className={difficulty === d ? "primary" : undefined}
-          style={{ padding: "2px 8px", fontSize: 12 }}
-          onClick={() => setDifficulty(d)}
-          title={`${RAID_DIFFICULTY_LABEL[d]} → трек ${TRACK_NAMES_RU[RAID_DIFFICULTY_TRACK[d]] ?? RAID_DIFFICULTY_TRACK[d]}`}
-        >
-          {RAID_DIFFICULTY_LABEL[d]}
-        </button>
-      ))}
+    <label className="row" style={{ gap: 8, alignItems: "center" }} title="На какой сложности вы сейчас рейдите: определяет трек/ilvl выпадающих предметов и какой % сима показывать как основной. Разбивка по всем сложностям видна в карточках.">
+      <span style={{ fontSize: compact ? 12 : 13 }}>{compact ? "Сложность:" : "Сложность рейда сейчас:"}</span>
+      <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as RaidDifficulty)} style={{ fontWeight: 600 }}>
+        {(["normal", "heroic", "mythic"] as RaidDifficulty[]).map((d) => (
+          <option key={d} value={d}>
+            {RAID_DIFFICULTY_LABEL[d]} → {TRACK_NAMES_RU[RAID_DIFFICULTY_TRACK[d]] ?? RAID_DIFFICULTY_TRACK[d]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/** Разбивка % сима по трекам: «Н +1.2 · Г +2.9 · М +4.8», активный трек жирным. */
+export function TrackBreakdown({ byTrack, active, size = 11 }: { byTrack: Record<string, number> | null | undefined; active?: string | null; size?: number }) {
+  if (!byTrack) return null;
+  const order = ["Champion", "Hero", "Myth"];
+  const short: Record<string, string> = { Champion: "Н", Hero: "Г", Myth: "М" };
+  const parts = order.filter((t) => byTrack[t] != null);
+  if (parts.length < 2) return null;
+  return (
+    <span className="num" style={{ fontSize: size, whiteSpace: "nowrap" }} title="Normal → Чемпион, Heroic → Герой, Mythic → Миф">
+      {parts.map((t, i) => {
+        const v = byTrack[t]!;
+        const isActive = t === active;
+        return (
+          <span key={t} style={{ fontWeight: isActive ? 700 : 400, color: isActive ? (v > 0.05 ? "var(--ok)" : v < -0.05 ? "var(--bad)" : "var(--text)") : "var(--text-muted)" }}>
+            {i ? " · " : ""}{short[t]} {v > 0 ? "+" : ""}{v.toFixed(1)}
+          </span>
+        );
+      })}
     </span>
   );
 }
