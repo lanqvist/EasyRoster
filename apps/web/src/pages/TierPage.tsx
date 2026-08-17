@@ -55,73 +55,73 @@ export function TierPage() {
         ⓘ приоритет = ценность 4pc × близость к 4pc · ⚗ = можно катализировать · наведите для подробностей
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ fontSize: 13 }}>
-          <thead>
-            <tr>
-              {th("name", "Персонаж")}
-              {th("pieces", "Тир")}
-              <th>Слоты</th>
-              {th("val4", "2pc / 4pc", "ценность бонусов, % dps (сим)")}
-              <th>До 4pc</th>
-              <th>Нужны токены (боссы)</th>
-              {th("priority", "Приоритет")}
-              <th>Сим</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.characterId} style={{ cursor: "pointer" }} onClick={() => setSel(r.characterId)}>
-                <td>
-                  <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
+      <div className="row" style={{ marginBottom: 8, gap: 6 }}>
+        <span className="muted" style={{ fontSize: 12 }}>Сортировка:</span>
+        {(["priority", "val4", "pieces", "name"] as const).map((k) => (
+          <button key={k} className={sort === k ? "primary" : undefined} style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setSort(k)}>
+            {k === "priority" ? "приоритет" : k === "val4" ? "ценность 4pc" : k === "pieces" ? "собрано" : "имя"}
+          </button>
+        ))}
+      </div>
+      <div className="tier-grid">
+        {rows.map((r) => (
+          <div key={r.characterId} className="tier-card" style={{ borderLeftColor: r.pieces >= 4 ? "var(--ok)" : r.pieces >= 2 ? "var(--warn)" : "var(--bad)" }} onClick={() => setSel(r.characterId)}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15 }}>
+                  <ClassIcon classId={r.classId} size={18} /><span style={{ color: classColor(r.classId), fontWeight: 700 }}>{r.name}</span>
                   <span className="muted" style={{ fontSize: 12 }}> · {specName(r.specId)}</span>
-                </td>
-                <td className="num" style={{ whiteSpace: "nowrap" }}>
-                  <b>{r.pieces}</b>/5{" "}
-                  <span style={{ letterSpacing: 1, color: r.pieces >= 4 ? "var(--ok)" : r.pieces >= 2 ? "var(--warn)" : "var(--text-muted)" }}>
-                    {"▮".repeat(r.pieces)}{"▯".repeat(5 - r.pieces)}
-                  </span>
-                  {r.catalyzable.length > 0 && <span title={`Катализируемо: ${r.catalyzable.map((s) => SLOT_NAMES_RU[s]).join(", ")}`} style={{ color: "#3fb8a8" }}> ⚗{r.catalyzable.length}</span>}
-                </td>
-                <td style={{ fontSize: 11, whiteSpace: "nowrap" }}>
-                  {TIER_SLOT_ORDER.map((s) => (
+                </div>
+                <div className="tier-bar" title={`собрано ${r.pieces}/5${r.catalyzable.length ? ` · катализируемо: ${r.catalyzable.map((x) => SLOT_NAMES_RU[x]).join(", ")}` : ""}`}>
+                  {TIER_SLOT_ORDER.map((sl) => (
                     <span
-                      key={s}
-                      title={SLOT_NAMES_RU[s]}
+                      key={sl}
+                      className="tier-seg"
+                      title={SLOT_NAMES_RU[sl]}
                       style={{
-                        display: "inline-block", padding: "0 4px", marginRight: 2, borderRadius: 3,
-                        background: r.owned.includes(s) ? "rgba(79,191,122,.25)" : r.catalyzable.includes(s) ? "rgba(63,184,168,.2)" : "rgba(224,96,96,.12)",
-                        color: r.owned.includes(s) ? "var(--ok)" : r.catalyzable.includes(s) ? "#3fb8a8" : "var(--bad)",
+                        background: r.owned.includes(sl) ? "var(--ok)" : r.catalyzable.includes(sl) ? "#3fb8a8" : "rgba(224,96,96,.35)",
                       }}
                     >
-                      {SLOT_SHORT[s]}
+                      {SLOT_SHORT[sl]}
                     </span>
                   ))}
-                </td>
-                <td className="num" style={{ background: heat(r.val4, max4), whiteSpace: "nowrap" }}>
-                  {r.val2 != null ? `${r.val2 > 0 ? "+" : ""}${r.val2.toFixed(1)}%` : "—"} / <b>{r.val4 != null ? `${r.val4 > 0 ? "+" : ""}${r.val4.toFixed(1)}%` : "—"}</b>
-                </td>
-                <td className="num">{r.pieces >= 4 ? <span style={{ color: "var(--ok)" }}>есть</span> : `${r.toFour} ч.`}</td>
-                <td style={{ fontSize: 11 }}>
-                  {r.pieces >= 4
-                    ? <span className="muted">5/5 — {r.missing.map((s) => SLOT_NAMES_RU[s]).join(", ") || "полный"}</span>
-                    : r.missingTokens.map((m) => (
-                        <span key={m.slot} style={{ display: "inline-block", marginRight: 8 }}>
-                          <span className="muted">{SLOT_SHORT[m.slot]}:</span>{" "}
-                          {m.tokens.length ? m.tokens.map((t) => (
-                            <a key={t.tokenId} href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToken(t.tokenId); }} title={t.name}>
-                              {t.encounterName}
-                            </a>
-                          )).reduce<React.ReactNode[]>((acc, el, i) => (i ? [...acc, "/", el] : [el]), []) : <span className="muted">?</span>}
-                        </span>
-                      ))}
-                </td>
-                <td className="num" style={{ background: heat(r.priority, maxP), fontWeight: 600 }}>{r.priority != null ? r.priority.toFixed(1) : "—"}</td>
-                <td className="muted" style={{ fontSize: 11 }}>{r.simAt ? relTime(r.simAt) : r.val4 == null ? "нет" : ""}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <span className="num" style={{ marginLeft: 8, fontWeight: 700 }}>{r.pieces}/5</span>
+                  {r.catalyzable.length > 0 && <span style={{ color: "#3fb8a8", marginLeft: 6 }} title="можно катализировать">⚗{r.catalyzable.length}</span>}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flex: "none" }}>
+                <div className="num" style={{ fontSize: 20, fontWeight: 700, color: r.priority == null ? "var(--text-muted)" : r.priority > 0 ? "var(--ok)" : "var(--text-muted)" }} title="приоритет = ценность 4pc × близость к 4pc">
+                  {r.priority != null ? r.priority.toFixed(1) : "—"}
+                </div>
+                <div className="muted" style={{ fontSize: 11 }}>приоритет</div>
+              </div>
+            </div>
+            <div className="row" style={{ marginTop: 6, gap: 14, fontSize: 12 }}>
+              <span title="ценность бонусов из сима">
+                2pc <b className="num">{r.val2 != null ? `${r.val2 > 0 ? "+" : ""}${r.val2.toFixed(1)}%` : "—"}</b>
+                {" · "}4pc <b className="num" style={{ color: r.val4 != null && r.val4 > 0 ? "var(--ok)" : undefined }}>{r.val4 != null ? `${r.val4 > 0 ? "+" : ""}${r.val4.toFixed(1)}%` : "—"}</b>
+              </span>
+              <span className="muted">{r.pieces >= 4 ? "4pc есть" : `до 4pc: ${r.toFour} ч.`}</span>
+              <span className="muted" style={{ marginLeft: "auto" }}>{r.simAt ? `сим ${relTime(r.simAt)}` : r.val4 == null ? "нет сима" : ""}</span>
+            </div>
+            {r.pieces < 4 && (
+              <div className="muted" style={{ fontSize: 11, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {r.missingTokens.map((m) => (
+                  <span key={m.slot} style={{ marginRight: 8 }}>
+                    {SLOT_SHORT[m.slot]}:{" "}
+                    {m.tokens.length
+                      ? m.tokens.map((t, i) => (
+                          <a key={t.tokenId} href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToken(t.tokenId); }} title={t.name}>
+                            {i ? "/" : ""}{t.encounterName}
+                          </a>
+                        ))
+                      : "?"}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       <h2 style={{ marginTop: 20 }}>Токены — кому</h2>
@@ -135,35 +135,30 @@ export function TierPage() {
       </div>
       {tok && (
         <div className="card" style={{ padding: "8px 12px" }}>
-          <table style={{ fontSize: 13 }}>
-            <thead>
-              <tr>
-                <th>Кому</th>
-                <th>Слот</th>
-                <th>Тир</th>
-                <th>Статус</th>
-                <th className="num" title="Прирост от этой части с учётом сет-бонуса (сим)">Даёт</th>
-                <th>Закроет</th>
-                <th className="num">4pc</th>
-                <th className="num">Приоритет</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tok.wanters.map((w) => (
-                <tr key={w.characterId + w.slot} style={{ cursor: "pointer" }} onClick={() => setSel(w.characterId)}>
-                  <td><span style={{ color: classColor(w.classId), fontWeight: 600 }}>{w.name}</span> <span className="muted">· {className(w.classId)}</span></td>
-                  <td className="muted">{SLOT_NAMES_RU[w.slot] ?? w.slot}</td>
-                  <td className="num">{w.pieces}/5</td>
-                  <td style={{ color: OBTAINED_STYLE[w.obtained].color }}>{OBTAINED_STYLE[w.obtained].label}</td>
-                  <td className="num" style={{ color: w.piecePct != null && w.piecePct > 0 ? "var(--ok)" : undefined, fontWeight: 600 }}>{w.piecePct != null ? `${w.piecePct > 0 ? "+" : ""}${w.piecePct.toFixed(1)}%` : "—"}</td>
-                  <td>{w.closes === 4 ? <b style={{ color: "var(--ok)" }}>4pc</b> : w.closes === 2 ? <span style={{ color: "var(--warn)" }}>2pc</span> : w.closes === 5 ? "5/5" : ""}</td>
-                  <td className="num">{w.val4 != null ? `${w.val4 > 0 ? "+" : ""}${w.val4.toFixed(1)}%` : "—"}</td>
-                  <td className="num">{w.priority != null ? w.priority.toFixed(1) : "—"}</td>
-                </tr>
-              ))}
-              {tok.wanters.length === 0 && <tr><td colSpan={8} className="muted">Никому из ростера не в BiS.</td></tr>}
-            </tbody>
-          </table>
+          {tok.wanters.length === 0 && <div className="muted">Никому из ростера не в BiS.</div>}
+          <div className="cand-list">
+            {tok.wanters.map((w) => (
+              <div key={w.characterId + w.slot} className="cand-card" style={{ borderLeftColor: OBTAINED_STYLE[w.obtained].color }} onClick={() => setSel(w.characterId)}>
+                <div className="cand-main">
+                  <div className="cand-name">
+                    <ClassIcon classId={w.classId} size={18} /><span style={{ color: classColor(w.classId), fontWeight: 700 }}>{w.name}</span>
+                    <span className="muted"> · {specName(w.specId)}</span>
+                  </div>
+                  <div className="cand-meta muted">
+                    {SLOT_NAMES_RU[w.slot] ?? w.slot} · тир {w.pieces}/5 · <span style={{ color: OBTAINED_STYLE[w.obtained].color }}>{OBTAINED_STYLE[w.obtained].label}</span>
+                    {w.closes === 4 ? <b style={{ color: "var(--ok)" }}> · закроет 4pc</b> : w.closes === 2 ? <span style={{ color: "var(--warn)" }}> · закроет 2pc</span> : ""}
+                    {w.val4 != null ? ` · 4pc = ${w.val4 > 0 ? "+" : ""}${w.val4.toFixed(1)}%` : ""}
+                  </div>
+                </div>
+                <div className="cand-pct">
+                  <div className="cand-pct-value" style={{ color: w.piecePct != null && w.piecePct > 0.05 ? "var(--ok)" : "var(--text-muted)" }} title="прирост от этой части с учётом сет-бонуса (сим)">
+                    {w.piecePct != null ? `${w.piecePct > 0 ? "+" : ""}${w.piecePct.toFixed(1)}%` : "—"}
+                  </div>
+                  <div className="cand-pct-sub muted">{w.priority != null ? `приоритет ${w.priority.toFixed(1)}` : "нет сима"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {sel !== null && <CharacterDrawer id={sel} onClose={() => setSel(null)} initialTab="bis" />}

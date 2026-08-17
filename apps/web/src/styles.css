@@ -172,7 +172,7 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 .cand-card:hover { background: rgba(217,164,65,.08); }
 .cand-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
 .cand-card.active { border-left-width: 5px; }
-.cand-main { min-width: 0; }
+.cand-main { min-width: 0; flex: 1 1 auto; }
 .cand-name { font-size: 15px; line-height: 1.2; }
 .cand-meta { font-size: 12px; margin-top: 2px; }
 .cand-alt { font-size: 12px; margin-top: 2px; }
@@ -203,3 +203,10 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 .slot-block-body { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.6fr); gap: 14px; padding: 10px 12px; }
 @media (max-width: 1000px) { .slot-block-body { grid-template-columns: 1fr; } }
 .bis-cand .cand-name a { font-size: 14px; }
+
+/* тир-сет: карточки */
+.tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 10px; }
+.tier-card { border: 1px solid var(--border); border-left: 5px solid var(--border); border-radius: 6px; background: var(--bg-elev-2); padding: 10px 12px; cursor: pointer; }
+.tier-card:hover { background: rgba(217,164,65,.08); }
+.tier-bar { display: flex; align-items: center; gap: 3px; margin-top: 6px; }
+.tier-seg { display: inline-block; min-width: 34px; text-align: center; font-size: 10px; line-height: 16px; border-radius: 3px; color: #111; font-weight: 600; }

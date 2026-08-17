@@ -135,7 +135,7 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
                 </div>
                 <div className="muted" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${KIND_LABEL[alt.kind]}${alt.sourceName ? ` · ${alt.sourceName}` : ""}`}>{KIND_LABEL[alt.kind]}{alt.sourceName ? ` · ${alt.sourceName}` : ""}</div>
                 <div />
-                <div className="num" style={{ fontSize: 12, fontWeight: 600, textAlign: "right", color: pctColor(alt.pct) }}>{pctText(alt.pct)}</div>
+                <div className="num" style={{ fontSize: 12, fontWeight: 600, textAlign: "right", color: dropped.simSelected ? pctColor(alt.pct) : "var(--text-muted)" }}>{dropped.simSelected ? pctText(alt.pct) : `балл ${Math.round(alt.pct)}`}</div>
                 <div />
               </div>
             </>

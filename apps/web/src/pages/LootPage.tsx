@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  TRACK_NAMES_RU,
   ARMOR_SUBCLASS_NAMES_RU,
   SLOT_NAMES_RU,
   SPECS,
@@ -17,7 +18,7 @@ import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
-import { ItemLink } from "../components/ItemLink";
+import { ItemIcon, ItemLink } from "../components/ItemLink";
 import { useConfig } from "../lib/config-context";
 
 export function LootPage() {
@@ -187,14 +188,12 @@ export function LootPage() {
               if (items.length === 0) return null;
               return (
                 <div key={enc.id} className="card" style={{ padding: "10px 14px" }}>
-                  <h2 style={{ fontSize: 15, marginBottom: 6 }}>{enc.name}</h2>
-                  <table>
-                    <tbody>
-                      {items.map((it) => (
-                        <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} wanters={wanters[it.id] ?? []} />
-                      ))}
-                    </tbody>
-                  </table>
+                  <h2 style={{ fontSize: 15, marginBottom: 8 }}>{enc.name}</h2>
+                  <div className="cand-list">
+                    {items.map((it) => (
+                      <ItemLine key={it.id} item={it} locale={config?.locale ?? "ru_RU"} wanters={wanters[it.id] ?? []} />
+                    ))}
+                  </div>
                 </div>
               );
             })
@@ -206,7 +205,8 @@ export function LootPage() {
 }
 
 function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wanters: ItemWanter[] }) {
-  const name = locale.startsWith("ru") ? item.nameRu ?? item.name : item.name;
+  const ru = locale.startsWith("ru");
+  const name = ru ? item.nameRu ?? item.name : item.name;
   const type =
     item.itemClass === 4
       ? ARMOR_SUBCLASS_NAMES_RU[item.itemSubClass ?? 0]
@@ -216,32 +216,43 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
           ? "Тир-токен"
           : "";
   const classes = item.allowableClasses?.map((c) => className(c)).join(", ");
+  const need = wanters.filter((w) => w.obtained !== "yes");
   return (
-    <tr>
-      <td>
-        <ItemLink itemId={item.id} name={name} icon={item.icon} quality={item.quality} ru={locale.startsWith("ru")} size={22} />
-        {item.nameRu && item.nameRu !== item.name && locale.startsWith("ru") && <span className="muted" style={{ fontSize: 12 }}> · {item.name}</span>}
-      </td>
-      <td className="muted">{item.slot ? SLOT_NAMES_RU[item.slot] : item.contains ? `Токен (${item.contains.length})` : ""}</td>
-      <td className="muted">{type}</td>
-      <td className="muted" style={{ fontSize: 12 }}>
-        {classes ?? (item.specs ? `${item.specs.length} спек` : "")}
-      </td>
-      <td style={{ fontSize: 12 }}>
-        {wanters.slice(0, 6).map((w) => (
-          <span
-            key={w.characterId + w.slot}
-            title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · ${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%${w.simTrack ? ` (${w.simTrack})` : ""}` : ""}${w.alt?.farmable ? ` · альт: ${w.alt.farmable.name} (M+) ${w.alt.farmable.pct > 0 ? "+" : ""}${w.alt.farmable.pct.toFixed(1)}%` : ""}${w.alt?.gap != null ? ` · незаменимость ▲${w.alt.gap.toFixed(1)}` : ""}`}
-            style={{ marginRight: 8, whiteSpace: "nowrap" }}
-          >
-            <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color, marginRight: 3 }} />
-            <span style={{ color: classColor(w.classId) }}>{w.name}</span>
-            <span className="muted">{w.rank > 1 ? ` #${w.rank}` : ""}</span>
-          </span>
-        ))}
-        {wanters.length > 6 && <span className="muted">+{wanters.length - 6}</span>}
-      </td>
-    </tr>
+    <div className="item-card" style={{ cursor: "default" }}>
+      <ItemIcon itemId={item.id} icon={item.icon} size={36} />
+      <div className="item-card-main">
+        <ItemLink itemId={item.id} name={name} quality={item.quality} ru={ru} style={{ fontSize: 14, fontWeight: 600 }} />
+        {item.nameRu && item.nameRu !== item.name && ru && <span className="muted" style={{ fontSize: 12 }}> · {item.name}</span>}
+        <div className="muted item-card-meta">
+          {item.slot ? SLOT_NAMES_RU[item.slot] : item.contains ? `Токен (${item.contains.length})` : ""}
+          {type ? ` · ${type}` : ""}
+          {classes ? ` · ${classes}` : item.specs ? ` · ${item.specs.length} спек` : ""}
+        </div>
+        {wanters.length > 0 && (
+          <div style={{ fontSize: 12, marginTop: 3, whiteSpace: "normal" }}>
+            {wanters.slice(0, 8).map((w) => (
+              <span
+                key={w.characterId + w.slot}
+                title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · ${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%${w.simTrack ? ` (${TRACK_NAMES_RU[w.simTrack] ?? w.simTrack})` : ""}` : ""}`}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 8, whiteSpace: "nowrap" }}
+              >
+                <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color }} />
+                <span style={{ color: classColor(w.classId) }}>{w.name}</span>
+                {w.upgradePct != null && <span className="num" style={{ color: w.upgradePct > 0.05 ? "var(--ok)" : "var(--text-muted)" }}>{w.upgradePct > 0 ? "+" : ""}{w.upgradePct.toFixed(1)}%</span>}
+                {w.rank > 1 && <span className="muted">#{w.rank}</span>}
+              </span>
+            ))}
+            {wanters.length > 8 && <span className="muted">+{wanters.length - 8}</span>}
+          </div>
+        )}
+      </div>
+      <div className="item-card-side">
+        <div className="num" style={{ fontSize: 15, fontWeight: 700 }}>
+          <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
+          <span className="muted" style={{ fontWeight: 400 }}> / {wanters.length}</span>
+        </div>
+        <div className="muted" style={{ fontSize: 11 }}>нужно</div>
+      </div>
+    </div>
   );
 }
-

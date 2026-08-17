@@ -47,7 +47,7 @@ function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; 
           <div className="cand-alt muted" style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
             <span>без рейда:</span>
             <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={14} muted style={{ fontSize: 12 }} />
-            <span>({KIND_LABEL[alt.kind]}) {pctText(alt.pct)}</span>
+            <span>({KIND_LABEL[alt.kind]}) {pct != null ? pctText(alt.pct) : `балл ${Math.round(alt.pct)}`}</span>
             {a?.gap != null && (a.gap > 0.05 ? <span style={{ color: a.gap >= 2 ? "var(--ok)" : a.gap >= 0.8 ? "var(--warn)" : undefined }}>· ▲{a.gap.toFixed(1)}</span> : <span>· заменим</span>)}
           </div>
         )}

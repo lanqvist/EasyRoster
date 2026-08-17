@@ -87,7 +87,7 @@ export function AltLine({ e }: { e: BisEntry }) {
   const gapColor = a.gap == null ? "var(--text-muted)" : a.gap >= 2 ? "var(--ok)" : a.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)";
   return (
     <div className="muted" style={{ fontSize: 11 }} title={a.best && a.best !== f ? `Лучшая из любого источника: ${a.best.name} (${KIND_LABEL[a.best.kind]}) ${a.best.pct > 0 ? "+" : ""}${a.best.pct.toFixed(1)}%` : undefined}>
-      альт. {KIND_LABEL[f.kind]}{f.sourceName ? ` (${f.sourceName})` : ""}: <ItemLink itemId={f.itemId} name={f.name} icon={f.icon ?? null} quality={f.quality} bonusIds={f.bonusIds ?? []} size={14} muted style={{ fontSize: 11 }} /> {f.pct > 0 ? "+" : ""}{f.pct.toFixed(1)}%
+      альт. {KIND_LABEL[f.kind]}{f.sourceName ? ` (${f.sourceName})` : ""}: <ItemLink itemId={f.itemId} name={f.name} icon={f.icon ?? null} quality={f.quality} bonusIds={f.bonusIds ?? []} size={14} muted style={{ fontSize: 11 }} /> {e.simSelected ? `${f.pct > 0 ? "+" : ""}${f.pct.toFixed(1)}%` : `балл ${Math.round(f.pct)}`}
       {a.gap != null && a.gap > 0.05 && <span style={{ color: gapColor }}> · незаменимость ▲{a.gap.toFixed(1)}</span>}
       {a.gap != null && a.gap <= 0.05 && <span> · заменим</span>}
     </div>
