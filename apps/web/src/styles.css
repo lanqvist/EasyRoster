@@ -134,7 +134,7 @@ tr.selected td { background: rgba(217,164,65,.08); }
   display: grid; grid-template-columns: 96px minmax(220px, 0.9fr) minmax(360px, 1.6fr); gap: 0 14px;
   padding: 4px 8px; border-bottom: 1px solid var(--border);
 }
-.slot-compare-head { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; position: sticky; top: 64px; background: var(--bg); z-index: 2; }
+
 .slot-compare-row:hover { filter: brightness(1.04); }
 @media (max-width: 900px) { .slot-compare-head, .slot-compare-row { grid-template-columns: 80px 1fr; } .slot-compare-row > div:nth-child(3) { grid-column: 1 / -1; } }
 /* мини-карточка слота (Лут-ночь) */
@@ -195,3 +195,11 @@ table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
 /* строки мини-карточки как карточки */
 .sf-card { border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; background: var(--bg-elev-2); margin-bottom: 4px; padding: 6px 8px; }
 .sf-card.active { background: rgba(217,164,65,.14); border-color: var(--accent); }
+/* карточка персонажа: блоки по слотам */
+.slot-compare { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.slot-block { border: 1px solid var(--border); border-radius: 8px; background: var(--bg-elev); }
+.slot-block-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.slot-block-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 600; }
+.slot-block-body { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.6fr); gap: 14px; padding: 10px 12px; }
+@media (max-width: 1000px) { .slot-block-body { grid-template-columns: 1fr; } }
+.bis-cand .cand-name a { font-size: 14px; }

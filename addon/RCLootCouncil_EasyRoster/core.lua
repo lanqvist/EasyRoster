@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.4.3"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.4.4"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
