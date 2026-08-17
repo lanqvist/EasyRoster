@@ -4,6 +4,7 @@ local RCVotingFrame = addon:GetModule("RCVotingFrame")
 local ER = addon:GetModule("RCEasyRoster")
 local VF = ER:NewModule("EasyRosterVotingFrame", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0")
 
+local tconcat = table.concat -- параметр DoCellUpdate называется `table` и затеняет стандартную библиотеку
 local session = 1
 local COL_NAME = "easyroster"
 local COL_ALT_MPLUS = "easyroster_alt_mplus"
@@ -92,7 +93,7 @@ local function makeAltCell(key, label)
 				for _, tr in ipairs({ "Champion", "Hero", "Myth" }) do
 					if a.pt[tr] then tinsert(parts, string.format("%s %+.1f%%", tr, a.pt[tr])) end
 				end
-				if #parts > 0 then tinsert(lines, "По трекам: " .. table.concat(parts, " · ")) end
+				if #parts > 0 then tinsert(lines, "По трекам: " .. tconcat(parts, " · ")) end
 			end
 			-- остальные типы — коротко
 			for _, k in ipairs(ER.ALT_KINDS) do
