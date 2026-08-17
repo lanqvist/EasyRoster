@@ -2,43 +2,37 @@ import { useMemo, useState } from "react";
 import { BIS_SLOT_ORDER, SLOT_NAMES_RU, type BisTeamRow } from "@easyroster/core";
 import { classColor, relTime, ROLE_RU, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "./BisSlotList";
-import { ClassIcon } from "./ClassIcon";
 import { DifficultySwitch } from "../lib/difficulty";
-
-const SLOT_SHORT: Record<string, string> = {
-  HEAD: "Гол", NECK: "Шея", SHOULDER: "Плч", BACK: "Плщ", CHEST: "Грд", WRIST: "Зап", HANDS: "Кст", WAIST: "Пояс", LEGS: "Ног", FEET: "Ступ",
-  FINGER: "Кол", TRINKET: "Акс", MAIN_HAND: "Прав", OFF_HAND: "Лев", WEAPON: "Ор", TWO_HAND: "2р",
-};
+import { ClassIcon } from "./ClassIcon";
+import { SimNowButton } from "./SimNowButton";
 
 type SortKey = "name" | "pct" | "ilvl" | "role" | "sim";
 
-/** Сводная тепловая карта BiS по статику: строка — персонаж, колонка — слот; цвет = статус, число = % сима лучшего кандидата. */
+/** Сводка BiS по статику: карточки персонажей с полосой статусов слотов; раскрытие — детали по слотам. */
 export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (characterId: number) => void }) {
   const [onlySim, setOnlySim] = useState(false);
   const [role, setRole] = useState<"" | "TANK" | "HEALER" | "DAMAGER">("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "pct", dir: 1 });
+  const [sort, setSort] = useState<SortKey>("pct");
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState<Record<number, boolean>>({});
 
   const rows = useMemo(() => {
     let r = team.filter((x) => (!onlySim || x.hasSim) && (!role || x.role === role) && (!search || x.name.toLowerCase().includes(search.toLowerCase())));
     const cmp: Record<SortKey, (a: BisTeamRow, b: BisTeamRow) => number> = {
       name: (a, b) => a.name.localeCompare(b.name, "ru"),
-      pct: (a, b) => (a.coverage?.pct ?? -1) - (b.coverage?.pct ?? -1),
-      ilvl: (a, b) => (a.ilvl ?? 0) - (b.ilvl ?? 0),
+      pct: (a, b) => (a.coverage?.pct ?? -1) - (b.coverage?.pct ?? -1) || a.name.localeCompare(b.name, "ru"),
+      ilvl: (a, b) => (b.ilvl ?? 0) - (a.ilvl ?? 0),
       role: (a, b) => (a.role ?? "Z").localeCompare(b.role ?? "Z") || a.name.localeCompare(b.name, "ru"),
       sim: (a, b) => (a.simAt ?? 0) - (b.simAt ?? 0),
     };
-    r = [...r].sort((a, b) => cmp[sort.key](a, b) * sort.dir);
-    return r;
+    return [...r].sort(cmp[sort]);
   }, [team, onlySim, role, sort, search]);
 
   const slots = BIS_SLOT_ORDER.filter((s) => team.some((r) => r.perSlot[s]));
-  const th = (key: SortKey, label: string, title?: string, cls?: string) => (
-    <th className={cls} title={title} style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }} onClick={() => setSort((s) => ({ key, dir: s.key === key ? ((s.dir * -1) as 1 | -1) : 1 }))}>
-      {label} {sort.key === key ? (sort.dir === 1 ? "▲" : "▼") : ""}
-    </th>
-  );
   const withSim = team.filter((t) => t.hasSim).length;
+  const sortBtn = (k: SortKey, label: string) => (
+    <button key={k} className={sort === k ? "primary" : undefined} style={{ padding: "2px 10px", fontSize: 12 }} onClick={() => setSort(k)}>{label}</button>
+  );
 
   return (
     <div>
@@ -55,78 +49,90 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
           <label className="row" style={{ gap: 6, fontSize: 13 }} title="Только персонажи со свежим персональным симом (SimC/Droptimizer)">
             <input type="checkbox" checked={onlySim} onChange={(e) => setOnlySim(e.target.checked)} /> только с симом ({withSim}/{team.length})
           </label>
+          <span className="muted" style={{ fontSize: 12 }}>сортировка:</span>
+          {sortBtn("pct", "BiS %")}{sortBtn("ilvl", "ilvl")}{sortBtn("role", "роль")}{sortBtn("sim", "сим")}{sortBtn("name", "имя")}
         </div>
-        <DifficultySwitch />
+        <DifficultySwitch compact />
       </div>
       {rows.length === 0 ? (
         <div className="placeholder">Никого не найдено по фильтрам.</div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ fontSize: 12 }}>
-            <thead>
-              <tr>
-                {th("name", "Персонаж")}
-                {th("role", "Роль")}
-                {th("ilvl", "ilvl", undefined, "num")}
-                {th("pct", "BiS %", "Слотов BiS получено на макс. треке / всего", "num")}
-                {th("sim", "Сим", "Свежесть персонального сима")}
-                {slots.map((s) => (
-                  <th key={s} style={{ textAlign: "center", fontSize: 10, padding: "4px 2px" }} title={SLOT_NAMES_RU[s]}>
-                    {SLOT_SHORT[s] ?? (SLOT_NAMES_RU[s] ?? s).slice(0, 4)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.characterId} style={{ cursor: "pointer" }} onClick={() => onSelect(r.characterId)}>
-                  <td style={{ whiteSpace: "nowrap" }}>
-                    <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
-                    <span className="muted"> · {specName(r.specId)}</span>
-                  </td>
-                  <td className="muted">{r.role ? ROLE_RU[r.role] : "—"}</td>
-                  <td className="num">{r.ilvl?.toFixed(0) ?? "—"}</td>
-                  <td className="num" style={{ fontWeight: 600 }}>
-                    {r.coverage ? <span title={`получено ${r.coverage.obtained}, ниже трек/катализатор ${r.coverage.lower}, всего ${r.coverage.slots}`}>{r.coverage.pct}%</span> : "—"}
-                  </td>
-                  <td className="muted" style={{ fontSize: 11, whiteSpace: "nowrap", color: r.hasSim ? undefined : "var(--warn)" }}>{r.hasSim ? relTime(r.simAt) : "нет"}</td>
-                  {slots.map((s) => {
-                    const st = r.perSlot[s];
-                    const style = st && st !== "none" ? OBTAINED_STYLE[st] : null;
-                    const best = r.perSlotBest[s];
-                    const pct = best?.pct;
-                    const showPct = style && st !== "yes" && pct != null;
-                    return (
-                      <td
-                        key={s}
-                        style={{ textAlign: "center", padding: "2px 2px", background: style ? style.bg : undefined }}
-                        title={`${SLOT_NAMES_RU[s]}: ${style?.label ?? "нет данных"}${best ? ` · ${best.name}${pct != null ? ` ${pct > 0 ? "+" : ""}${pct.toFixed(1)}%` : ""}` : ""}`}
-                      >
-                        {showPct ? (
-                          <span className="num" style={{ fontSize: 10, color: pct > 0.05 ? "var(--ok)" : "var(--text-muted)", fontWeight: 600 }}>
-                            {pct > 0 ? "+" : ""}{Math.abs(pct) >= 10 ? pct.toFixed(0) : pct.toFixed(1)}
+        <div className="cand-list">
+          {rows.map((r) => {
+            const isOpen = !!open[r.characterId];
+            const cov = r.coverage;
+            return (
+              <div key={r.characterId} className={`bis-card${isOpen ? " active" : ""}`} onClick={() => setOpen({ ...open, [r.characterId]: !isOpen })}>
+                <div className="bis-card-row">
+                  <div className="bis-card-who">
+                    <div style={{ fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <ClassIcon classId={r.classId} size={18} /><span style={{ color: classColor(r.classId), fontWeight: 700 }}>{r.name}</span>
+                      <span className="muted" style={{ fontSize: 12 }}> · {specName(r.specId)}{r.role ? ` · ${ROLE_RU[r.role]}` : ""}</span>
+                    </div>
+                    <div className="muted" style={{ fontSize: 11 }}>
+                      ilvl <b className="num">{r.ilvl?.toFixed(0) ?? "—"}</b>
+                      {" · "}{r.hasSim ? `сим ${relTime(r.simAt)}` : <span style={{ color: "var(--warn)" }}>сима нет</span>}
+                      {cov ? ` · ${cov.obtained} из ${cov.slots} на макс. треке, ${cov.lower} ниже трека` : ""}
+                    </div>
+                  </div>
+                  <div className="bis-strip" title="Слоты: цвет — статус лучшего кандидата (зелёный есть, жёлтый ниже трек, голубой катализатор, красный нет)">
+                    {slots.map((s) => {
+                      const st = r.perSlot[s];
+                      const style = st && st !== "none" ? OBTAINED_STYLE[st] : null;
+                      const best = r.perSlotBest[s];
+                      return (
+                        <span
+                          key={s}
+                          className="bis-seg"
+                          title={`${SLOT_NAMES_RU[s]}: ${style?.label ?? "нет данных"}${best ? ` — ${best.name}${best.pct != null ? ` (${best.pct > 0 ? "+" : ""}${best.pct.toFixed(1)}%)` : ""}` : ""}`}
+                          style={{ background: style ? style.color : "var(--bg-elev-2)", opacity: style ? 0.9 : 0.4 }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="bis-card-pct" onClick={(e) => e.stopPropagation()}>
+                    <div className="num" style={{ fontSize: 22, fontWeight: 700, color: cov && cov.pct >= 50 ? "var(--ok)" : cov && cov.pct > 0 ? "var(--warn)" : "var(--text-muted)" }} title="Слотов BiS на макс. треке / всего">
+                      {cov ? `${cov.pct}%` : "—"}
+                    </div>
+                    <div className="row" style={{ gap: 4, justifyContent: "flex-end" }}>
+                      <button style={{ padding: "1px 8px", fontSize: 11 }} onClick={() => onSelect(r.characterId)}>карточка</button>
+                      <SimNowButton characterId={r.characterId} small />
+                    </div>
+                  </div>
+                </div>
+                {isOpen && (
+                  <div className="bis-card-detail" onClick={(e) => e.stopPropagation()}>
+                    {slots.map((s) => {
+                      const st = r.perSlot[s];
+                      const style = st && st !== "none" ? OBTAINED_STYLE[st] : null;
+                      const best = r.perSlotBest[s];
+                      return (
+                        <div key={s} className="bis-detail-row" style={{ borderLeftColor: style?.color ?? "var(--border)" }}>
+                          <span className="muted" style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", width: 86, flex: "none" }}>{SLOT_NAMES_RU[s]}</span>
+                          <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: "1 1 auto" }}>{best?.name ?? <span className="muted">нет кандидатов</span>}</span>
+                          <span className="num" style={{ width: 60, textAlign: "right", fontWeight: 600, color: best?.pct != null ? (best.pct > 0.05 ? "var(--ok)" : "var(--text-muted)") : "var(--text-muted)" }}>
+                            {best?.pct != null ? `${best.pct > 0 ? "+" : ""}${best.pct.toFixed(1)}%` : ""}
                           </span>
-                        ) : (
-                          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: style ? style.color : "var(--bg-elev-2)", opacity: style ? 0.9 : 0.5 }} />
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="muted row" style={{ fontSize: 11, marginTop: 8, gap: 14 }}>
-            {(["yes", "lower", "catalyst", "no"] as const).map((k) => (
-              <span key={k}>
-                <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: OBTAINED_STYLE[k].color, marginRight: 4 }} />
-                {OBTAINED_STYLE[k].label}
-              </span>
-            ))}
-            <span>число в ячейке — % сима лучшего недостающего кандидата для выбранной сложности</span>
-          </div>
+                          <span style={{ width: 96, textAlign: "right", fontSize: 11, color: style?.color ?? "var(--text-muted)" }}>{style?.label ?? "—"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
+      <div className="muted row" style={{ fontSize: 11, marginTop: 8, gap: 14 }}>
+        {(["yes", "lower", "catalyst", "no"] as const).map((k) => (
+          <span key={k}>
+            <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: OBTAINED_STYLE[k].color, marginRight: 4 }} />
+            {OBTAINED_STYLE[k].label}
+          </span>
+        ))}
+        <span>клик по карточке — детали по слотам</span>
+      </div>
     </div>
   );
 }
