@@ -2,17 +2,21 @@ import { useState } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { applyTheme, getTheme, type Theme } from "./lib/theme";
 import { ConfigProvider, useConfig } from "./lib/config-context";
+import { DifficultyProvider } from "./lib/difficulty";
 import { SetupPage } from "./pages/SetupPage";
 import { RosterPage } from "./pages/RosterPage";
 import { LootPage } from "./pages/LootPage";
 import { BisPage } from "./pages/BisPage";
 import { RaidNightPage } from "./pages/RaidNightPage";
+import { TierPage } from "./pages/TierPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 export function App() {
   return (
     <ConfigProvider>
-      <Shell />
+      <DifficultyProvider>
+        <Shell />
+      </DifficultyProvider>
     </ConfigProvider>
   );
 }
@@ -46,6 +50,7 @@ function Shell() {
           <NavLink to="/bis">BiS</NavLink>
           <NavLink to="/loot">Лут</NavLink>
           <NavLink to="/raid-night">Лут-ночь</NavLink>
+          <NavLink to="/tier">Тир-сет</NavLink>
           <NavLink to="/settings">Настройки</NavLink>
         </nav>
         <div className="foot">
@@ -64,6 +69,7 @@ function Shell() {
           <Route path="/bis" element={<BisPage />} />
           <Route path="/loot" element={<LootPage />} />
           <Route path="/raid-night" element={<RaidNightPage />} />
+          <Route path="/tier" element={<TierPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/roster" replace />} />
         </Routes>

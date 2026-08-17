@@ -14,11 +14,13 @@ import {
   type ItemWanter,
 } from "@easyroster/core";
 import { api } from "../lib/api";
+import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { className, classColor, QUALITY_COLORS_NUM } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { useConfig } from "../lib/config-context";
 
 export function LootPage() {
+  const { difficulty } = useDifficulty();
   const { config } = useConfig();
   const [status, setStatus] = useState<StaticDataStatus | null>(null);
   const [instances, setInstances] = useState<{ season: StaticDataStatus["season"]; all: InstanceRow[] } | null>(null);
@@ -56,13 +58,13 @@ export function LootPage() {
         setView(v);
         const ids = v.encounters.flatMap((e) => e.items.map((i) => i.id));
         try {
-          setWanters(await api.bisWanters(ids));
+          setWanters(await api.bisWanters(ids, difficulty));
         } catch {
           setWanters({});
         }
       })
       .catch((e) => setErr((e as Error).message));
-  }, [selected]);
+  }, [selected, difficulty]);
 
   const refresh = async (force: boolean) => {
     setBusy(true);
@@ -105,7 +107,10 @@ export function LootPage() {
 
   return (
     <div>
-      <h1>Лут — {seasonLabel}</h1>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1>Лут — {seasonLabel}</h1>
+        <DifficultySwitch />
+      </div>
       <div className="card" style={{ padding: "10px 16px" }}>
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div className="muted" style={{ fontSize: 13 }}>
@@ -230,7 +235,7 @@ function ItemLine({ item, locale, wanters }: { item: ItemRow; locale: string; wa
         {wanters.slice(0, 6).map((w) => (
           <span
             key={w.characterId + w.slot}
-            title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · +${w.upgradePct}%` : ""}`}
+            title={`#${w.rank} в слоте · ${OBTAINED_STYLE[w.obtained].label}${w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}${w.upgradePct != null ? ` · ${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%${w.simTrack ? ` (${w.simTrack})` : ""}` : ""}${w.alt?.farmable ? ` · альт: ${w.alt.farmable.name} (M+) ${w.alt.farmable.pct > 0 ? "+" : ""}${w.alt.farmable.pct.toFixed(1)}%` : ""}${w.alt?.gap != null ? ` · незаменимость ▲${w.alt.gap.toFixed(1)}` : ""}`}
             style={{ marginRight: 8, whiteSpace: "nowrap" }}
           >
             <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color, marginRight: 3 }} />

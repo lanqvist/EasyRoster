@@ -32,6 +32,12 @@ export async function simRoutes(app: FastifyInstance, ctx: AppContext): Promise<
     return { ok: true };
   });
 
+  /** Тир-сет: прогресс, ценность 2pc/4pc, приоритет; токены — кому. */
+  app.get("/api/tier", async () => {
+    const rows = ctx.tier.rows();
+    return { rows, tokens: ctx.tier.tokenViews(rows) };
+  });
+
   /** Последний результат сима персонажа: кандидаты simc с метаданными. */
   app.get("/api/sim/character/:id", async (req, reply) => {
     const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);

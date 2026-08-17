@@ -218,6 +218,12 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX IF NOT EXISTS idx_sim_runs_char ON sim_runs(character_id, id);
   `,
+  // v7 — фаза 7: ценность тир-сета из сима
+  `
+  ALTER TABLE sim_runs ADD COLUMN tier_pieces INTEGER;
+  ALTER TABLE sim_runs ADD COLUMN tier2_pct REAL;
+  ALTER TABLE sim_runs ADD COLUMN tier4_pct REAL;
+  `,
 ];
 
 export class Db {

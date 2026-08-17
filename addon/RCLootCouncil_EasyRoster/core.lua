@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.3.1"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.4.0"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -145,6 +145,7 @@ function ER:FormatEntry(entry, track)
 	local text = rankText
 	if entry.k == 1 then text = text .. " |cff9a9dab(токен)|r" end
 	if entry.c == 1 then text = text .. " |cff9a9dab(→катализ.)|r" end
+	if entry.tc == 4 then text = text .. " |cff4fbf7aзакроет 4pc|r" elseif entry.tc == 2 then text = text .. " |cffe0b64aзакроет 2pc|r" end
 	if not self:GetOpt("showRankOnly") then
 		text = text .. " " .. st.color .. st.text .. "|r"
 	end
@@ -153,6 +154,11 @@ function ER:FormatEntry(entry, track)
 		local color = pct > 0 and "|cff7cc4ff" or "|cff9a9dab"
 		text = text .. string.format(" %s%+.1f%%|r", color, pct)
 		if entry.dt then text = text .. string.format(" |cff9a9dab(урон %+.1f%%)|r", entry.dt) end
+		-- незаменимость: насколько лучше фармабельной альтернативы
+		if entry.ag then
+			local gcol = entry.ag >= 2 and "|cff4fbf7a" or (entry.ag >= 0.8 and "|cffe0b64a" or "|cff9a9dab")
+			text = text .. string.format(" %s▲%.1f|r", gcol, entry.ag)
+		end
 	end
 	return text
 end
@@ -192,7 +198,22 @@ function ER:TooltipLines(entry, name)
 			tinsert(lines, string.format("Танк: входящий урон %+.1f%%%s", entry.dt or 0, entry.hp and string.format(", самолечение %+.1f%%", entry.hp) or ""))
 		end
 	end
-	if entry.t == 1 then tinsert(lines, "Тир-предмет") end
+	local SRC = { r = "рейд", m = "M+", v = "тайник", c = "катализатор", k = "крафт", w = "мировой босс", o = "другое" }
+	if entry.ap or entry.ai then
+		local altName = entry.ai and (C_Item.GetItemInfo(entry.ai) or ("#" .. entry.ai)) or "?"
+		tinsert(lines, string.format("Лучшая альтернатива: %s (%s) %+.1f%%", altName, SRC[entry.as or "o"] or "?", entry.ap or 0))
+	end
+	if entry.ag then
+		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" · альтернатив ≥95%%: " .. entry.an) or ""))
+	end
+	if entry.t == 1 then
+		local tl = "Тир-предмет"
+		if entry.tp then tl = tl .. string.format(" · надето %d/5", entry.tp) end
+		if entry.t4 then tl = tl .. string.format(" · 4pc = %+.1f%%", entry.t4) end
+		if entry.t2 then tl = tl .. string.format(" · 2pc = %+.1f%%", entry.t2) end
+		if entry.tc == 4 then tl = tl .. " · |cff4fbf7aэта часть закроет 4pc|r" elseif entry.tc == 2 then tl = tl .. " · закроет 2pc" end
+		tinsert(lines, tl)
+	end
 	if entry.k == 1 then tinsert(lines, "Тир-токен: содержит BiS-предмет для этого персонажа") end
 	if entry.c == 1 then tinsert(lines, "Рейдовый предмет — источник для Катализатора") end
 	return lines

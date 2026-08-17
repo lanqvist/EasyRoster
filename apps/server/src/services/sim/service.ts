@@ -25,6 +25,8 @@ export class SimService {
   private working = false;
   /** после каждого успешного сима (например, экспорт db.lua) */
   afterSim: ((characterId: number) => Promise<void>) | null = null;
+  /** сколько частей тира надето (устанавливается контекстом из TierService) */
+  tierPiecesOf: ((c: CharacterRow) => number) | null = null;
 
   constructor(
     private readonly db: Db,
@@ -197,6 +199,15 @@ export class SimService {
         lines.push(`tank_dummy=mythic`);
         lines.push(`profileset_metric=dps,dtps,hps`);
       }
+      // ценность тир-сета: принудительно вкл/выкл 2pc/4pc
+      const tierName = simCfg.tierSetName || autoTierSetName(cfg.season.label);
+      const tierPieces = this.tierPiecesOf?.(c) ?? null;
+      if (tierName) {
+        lines.push(`profileset."tier/2on"+=set_bonus=${tierName}_2pc=1`);
+        lines.push(`profileset."tier/2off"+=set_bonus=${tierName}_2pc=0`);
+        lines.push(`profileset."tier/4on"+=set_bonus=${tierName}_4pc=1`);
+        lines.push(`profileset."tier/4off"+=set_bonus=${tierName}_4pc=0`);
+      }
       lines.push(`json2=result.json`);
       lines.push("");
       for (const cnd of cands) lines.push(profilesetLine(cnd, { clearOffHand: hasOffHand }));
@@ -232,14 +243,15 @@ export class SimService {
 
       // --- разбор
       const parsed = this.parseResult(res.json, cands, role, simCfg.tankWeights, simCfg.fightStyle);
+      const tier = parseTierValues(res.json, parsed.baseline, tierPieces ?? 0);
       this.bisRepo.replaceCandidates("simc", specId, c.id, parsed.candidates, Date.now());
       this.bisRepo.addSimReport({
         characterId: c.id, specId, kind: "simc", reportId: null, url: null, simDate: Date.now(), baselineDps: parsed.baseline,
         fightStyle: simCfg.fightStyle, meta: { profilesets: cands.length, elapsedMs: res.elapsedMs, role, targetError: simCfg.targetError },
       });
       this.db.conn
-        .prepare("UPDATE sim_runs SET finished_at = ?, ok = 1, message = ?, profilesets = ?, baseline = ?, elapsed_ms = ? WHERE id = ?")
-        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с${talentsNote}`, cands.length, parsed.baseline, res.elapsedMs, runId);
+        .prepare("UPDATE sim_runs SET finished_at = ?, ok = 1, message = ?, profilesets = ?, baseline = ?, elapsed_ms = ?, tier_pieces = ?, tier2_pct = ?, tier4_pct = ? WHERE id = ?")
+        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с${talentsNote}`, cands.length, parsed.baseline, res.elapsedMs, tierPieces, tier.val2, tier.val4, runId);
       this.log.info(`sim ${c.name}: ${cands.length} профильсетов, base ${Math.round(parsed.baseline)}, ${Math.round(res.elapsedMs / 1000)} с`);
       return { profilesets: cands.length, baseline: parsed.baseline, elapsedMs: res.elapsedMs };
     } catch (e) {
@@ -337,3 +349,25 @@ export class SimService {
 }
 
 export type { ItemRow };
+
+/** «Season 2» → mid2 (Midnight); для других дополнений — расширить таблицу. */
+export function autoTierSetName(seasonLabel: string): string | null {
+  const m = /season\s*(\d+)/i.exec(seasonLabel);
+  if (!m) return null;
+  return `mid${m[1]}`;
+}
+
+/** Ценность 2pc/4pc в % относительно базы: если бонус есть — сколько теряем при выключении, если нет — сколько даёт включение. */
+export function parseTierValues(json: any, baseline: number, pieces: number): { val2: number | null; val4: number | null } {
+  const results: any[] = json?.sim?.profilesets?.results ?? [];
+  const get = (name: string): number | null => {
+    const r = results.find((x) => x.name === name);
+    return r && typeof r.mean === "number" ? r.mean : null;
+  };
+  if (!baseline) return { val2: null, val4: null };
+  const pct = (v: number) => Math.round((v / baseline) * 10000) / 100;
+  const on2 = get("tier/2on"), off2 = get("tier/2off"), on4 = get("tier/4on"), off4 = get("tier/4off");
+  const val4 = pieces >= 4 ? (off4 != null ? pct(baseline - off4) : null) : on4 != null ? pct(on4 - baseline) : null;
+  const val2 = pieces >= 2 ? (off2 != null ? pct(baseline - off2) : null) : on2 != null ? pct(on2 - baseline) : null;
+  return { val2, val4 };
+}

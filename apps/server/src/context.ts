@@ -6,6 +6,7 @@ import { ItemsService } from "./services/items.js";
 import { BisService } from "./services/bis/service.js";
 import { WowIntegrationService } from "./services/wow-integration.js";
 import { SimService } from "./services/sim/service.js";
+import { TierService } from "./services/tier.js";
 
 export interface Logger {
   info: (m: string) => void;
@@ -22,6 +23,7 @@ export interface AppContext {
   bis: BisService;
   wow: WowIntegrationService;
   sim: SimService;
+  tier: TierService;
   log: Logger;
 }
 
@@ -80,5 +82,12 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   sim.afterSim = async () => {
     if (config.get().sync.autoExportLua && config.get().wowRetailPath) wow.exportDbLua();
   };
-  return { config, db, sync, staticData, items, bis, wow, sim, log };
+  const tier = new TierService(db, config, staticData, sync.repo, bis);
+  sim.tierPiecesOf = (c) => tier.progress(c).pieces;
+  wow.tierProvider = (c) => {
+    const p = tier.progress(c);
+    const r = tier.rows().find((x) => x.characterId === c.id);
+    return { pieces: p.pieces, val4: r?.val4 ?? null, val2: r?.val2 ?? null };
+  };
+  return { config, db, sync, staticData, items, bis, wow, sim, tier, log };
 }

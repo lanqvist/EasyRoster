@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
-  isSimSource, rclcKeyForExport, type AddonStatus, type LootHistoryRow, type ItemWanter } from "@easyroster/core";
+  isSimSource, rclcKeyForExport, type AddonStatus, type CharacterRow, type LootHistoryRow, type ItemWanter } from "@easyroster/core";
 import { REPO_ROOT } from "../paths.js";
 import type { ConfigService } from "./config.js";
 import type { Db } from "./db.js";
@@ -118,6 +118,9 @@ export class WowIntegrationService {
    * Записи создаются для самого BiS-предмета, для рейдового предмета-источника (катализатор)
    * и для тир-токенов, содержащих BiS-предмет.
    */
+  /** Прогресс тира персонажа (устанавливается контекстом из TierService). */
+  tierProvider: ((c: CharacterRow) => { pieces: number; val4: number | null; val2: number | null }) | null = null;
+
   buildExportData(): { data: Record<string, Record<number, ExportEntry>>; characters: number } {
     const data: Record<string, Record<number, ExportEntry>> = {};
     const raiders = this.chars.listRaiders();
@@ -134,6 +137,7 @@ export class WowIntegrationService {
       if (!view) continue;
       const key = rclcKeyForExport(c.name, c.realmName || c.realmSlug);
       const map: Record<number, ExportEntry> = {};
+      const tier = this.tierProvider ? this.tierProvider(c) : null;
       for (const s of view.slots) {
         for (const e of s.entries) {
           const sims = e.sources.filter((x) => isSimSource(x.source) && x.score != null);
@@ -161,7 +165,33 @@ export class WowIntegrationService {
             if (Object.keys(pt).length > 1) entry.pt = pt;
           }
           if (e.obtainedDetail) entry.d = e.obtainedDetail;
-          if (e.isTier) entry.t = 1;
+          if (e.alternatives) {
+            const KIND: Record<string, string> = { raid: "r", mplus: "m", vault: "v", catalyst: "c", craft: "k", world: "w", other: "o" };
+            const a = e.alternatives;
+            if (a.farmable) {
+              entry.ap = Math.round(a.farmable.pct * 10) / 10;
+              entry.ai = a.farmable.itemId;
+              entry.as = KIND[a.farmable.kind] ?? "o";
+            } else if (a.best) {
+              entry.ap = Math.round(a.best.pct * 10) / 10;
+              entry.ai = a.best.itemId;
+              entry.as = KIND[a.best.kind] ?? "o";
+            }
+            if (a.gap != null) entry.ag = Math.round(a.gap * 10) / 10;
+            if (a.count) entry.an = a.count;
+          }
+          const SK: Record<string, string> = { raid: "r", mplus: "m", vault: "v", catalyst: "c", craft: "k", world: "w", other: "o" };
+          entry.sk = SK[e.sourceKind] ?? "o";
+          if (e.isTier) {
+            entry.t = 1;
+            if (tier) {
+              entry.tp = tier.pieces;
+              if (tier.val4 != null) entry.t4 = Math.round(tier.val4 * 10) / 10;
+              if (tier.val2 != null) entry.t2 = Math.round(tier.val2 * 10) / 10;
+              const next = tier.pieces + 1;
+              entry.tc = next === 2 ? 2 : next === 4 ? 4 : 0;
+            }
+          }
           const put = (id: number, extra: Partial<ExportEntry> = {}) => {
             const prev = map[id];
             const next = { ...entry, ...extra };
@@ -356,6 +386,16 @@ export interface ExportEntry {
   dd?: number; // абсолютный прирост dps (simc)
   dt?: number; // танк: изменение входящего урона %
   hp?: number; // танк: изменение самолечения %
+  ap?: number; // % лучшей альтернативы (фармабельной, иначе любой)
+  ai?: number; // itemID альтернативы
+  as?: string; // тип источника альтернативы: r/m/v/c/k/w/o
+  ag?: number; // gap: pct − фармабельная альтернатива
+  an?: number; // число альтернатив ≥95 %
+  sk?: string; // тип источника самого предмета
+  tp?: number; // частей тира надето
+  t4?: number; // ценность 4pc, %
+  t2?: number; // ценность 2pc, %
+  tc?: number; // эта часть закроет: 2 / 4 / 0
   d?: string; // детали
   t?: 1; // тир
   c?: 1; // рейдовый источник для катализатора

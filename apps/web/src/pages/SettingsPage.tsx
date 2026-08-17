@@ -25,7 +25,9 @@ export function SettingsPage() {
     tankWeights: config?.sim.tankWeights ?? { dps: 0.4, dtps: 0.5, hps: 0.1 },
     maxAgeDays: config?.sim.maxAgeDays ?? 7,
     simcPath: config?.sim.simcPath ?? "",
+    tierSetName: config?.sim.tierSetName ?? "",
   }));
+  const [raidDiff, setRaidDiff] = useState(config?.season.raidDifficulty ?? "normal");
   const [bnetId, setBnetId] = useState(config?.blizzard.clientId ?? "");
   const [bnetSecret, setBnetSecret] = useState("");
   const [wclId, setWclId] = useState(config?.warcraftLogs.clientId ?? "");
@@ -43,6 +45,7 @@ export function SettingsPage() {
         wowRetailPath: wowPath,
         sync: { intervalMinutes: interval, guidesRefreshDays: guidesDays, autoExportLua: autoExport },
         sim: sim as any,
+        season: { raidDifficulty: raidDiff } as any,
         blizzard: { clientId: bnetId, clientSecret: bnetSecret },
         warcraftLogs: { clientId: wclId, clientSecret: wclSecret },
       });
@@ -177,6 +180,18 @@ export function SettingsPage() {
               <input type="number" step={0.1} style={{ width: 70 }} value={sim.tankWeights.hps} onChange={(e) => setSim({ ...sim, tankWeights: { ...sim.tankWeights, hps: Number(e.target.value) } })} />
             </div>
             <span className="hint">итог = dps·w1 − dtps·w2 + hps·w3 (в %). Хилов SimC не считает.</span>
+          </div>
+          <div className="field">
+            <label>Сложность рейда по умолчанию (треки/% в BiS и db.lua)</label>
+            <select value={raidDiff} onChange={(e) => setRaidDiff(e.target.value as typeof raidDiff)}>
+              <option value="normal">Normal → Champion</option>
+              <option value="heroic">Heroic → Hero</option>
+              <option value="mythic">Mythic → Myth</option>
+            </select>
+          </div>
+          <div className="field">
+            <label>Имя сет-бонуса в SimC (пусто = авто, напр. mid2)</label>
+            <input value={sim.tierSetName} onChange={(e) => setSim({ ...sim, tierSetName: e.target.value })} />
           </div>
           <div className="field">
             <label>Путь к simc.exe (пусто = скачанный автоматически)</label>

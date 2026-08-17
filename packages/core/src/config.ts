@@ -65,6 +65,8 @@ export const AppConfigSchema = z.object({
       seasonId: z.number().int().nullable().default(null),
       /** подпись сезона для UI */
       label: z.string().default(""),
+      /** сложность рейда по умолчанию для треков/процентов в UI и экспорте */
+      raidDifficulty: z.enum(["normal", "heroic", "mythic"]).default("normal"),
     })
     .default({}),
 
@@ -98,7 +100,7 @@ export const AppConfigSchema = z.object({
       targetError: z.number().min(0.05).max(2).default(0.4),
       threads: z.number().int().min(0).max(64).default(0), // 0 = все ядра
       /** сложности рейда → треки: какие симить */
-      raidTracks: z.array(z.enum(["Champion", "Hero", "Myth"])).default(["Hero", "Myth"]),
+      raidTracks: z.array(z.enum(["Champion", "Hero", "Myth"])).default(["Champion", "Hero", "Myth"]),
       /** M+ дроп (Hero) и/или тайник (Myth) */
       dungeonTracks: z.array(z.enum(["Champion", "Hero", "Myth"])).default(["Hero"]),
       /** веса метрик для танков: score = dps·w1 − dtps·w2 + hps·w3 */
@@ -107,6 +109,8 @@ export const AppConfigSchema = z.object({
       maxAgeDays: z.number().int().min(1).max(60).default(7),
       /** путь к simc.exe (пусто = скачанный автоматически) */
       simcPath: z.string().default(""),
+      /** имя сет-бонуса в simc (mid2 …); пусто = автоматически из подписи сезона */
+      tierSetName: z.string().default(""),
     })
     .default({}),
 

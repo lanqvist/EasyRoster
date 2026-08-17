@@ -4,9 +4,11 @@ import { BisSlotList, SOURCE_LABEL } from "./BisSlotList";
 import { api } from "../lib/api";
 import { classColor, className, fmtDate, QUALITY_COLORS, QUALITY_COLORS_NUM, ROLE_RU, roleOf, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
+import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 
 export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: number; onClose: () => void; initialTab?: "gear" | "bis" }) {
   const { config } = useConfig();
+  const { difficulty } = useDifficulty();
   const [data, setData] = useState<CharacterDetail | null>(null);
   const [tab, setTab] = useState<"gear" | "bis" | "sim">(initialTab);
   const [bis, setBis] = useState<BisCharacterView | null>(null);
@@ -14,13 +16,17 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
 
   const loadBis = () =>
     api
-      .bisCharacter(id)
+      .bisCharacter(id, undefined, difficulty)
       .then((v) => {
         setBis(v);
         setBisErr(null);
       })
       .catch((e) => setBisErr((e as Error).message));
 
+  useEffect(() => {
+    if (tab === "bis") void loadBis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
   useEffect(() => {
     if (tab === "bis") void loadBis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,6 +132,7 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
               <button className={tab === "gear" ? "primary" : undefined} onClick={() => setTab("gear")}>Экипировка</button>
               <button className={tab === "bis" ? "primary" : undefined} onClick={() => setTab("bis")}>BiS-лист</button>
               <button className={tab === "sim" ? "primary" : undefined} onClick={() => setTab("sim")}>Сим</button>
+              {tab === "bis" && <span style={{ marginLeft: "auto" }}><DifficultySwitch /></span>}
             </div>
             {tab === "sim" && <SimResults characterId={id} locale={config?.locale ?? "ru_RU"} onChanged={loadBis} />}
             {tab === "bis" && (

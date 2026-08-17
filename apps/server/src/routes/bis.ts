@@ -34,13 +34,13 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
 
   app.get("/api/bis/character/:id", async (req, reply) => {
     const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);
-    const q = z.object({ spec: z.coerce.number().int().optional() }).parse(req.query);
+    const q = z.object({ spec: z.coerce.number().int().optional(), difficulty: z.enum(["normal", "heroic", "mythic"]).optional() }).parse(req.query);
     const c = ctx.sync.repo.get(id);
     if (!c) {
       reply.code(404);
       return { error: "Персонаж не найден" };
     }
-    const view = ctx.bis.characterBis(c, q.spec);
+    const view = ctx.bis.characterBis(c, q.spec, { difficulty: q.difficulty });
     if (!view) {
       reply.code(409);
       return { error: "У персонажа не определена спека — синхронизируйте профиль" };
@@ -73,12 +73,13 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
 
   app.get("/api/bis/item/:itemId", async (req) => {
     const { itemId } = z.object({ itemId: z.coerce.number().int() }).parse(req.params);
-    return ctx.bis.wanters(itemId);
+    const q = z.object({ difficulty: z.enum(["normal", "heroic", "mythic"]).optional() }).parse(req.query);
+    return ctx.bis.wanters(itemId, q.difficulty);
   });
 
   app.post("/api/bis/wanters", async (req) => {
-    const body = z.object({ itemIds: z.array(z.number().int()).max(500) }).parse(req.body);
-    return ctx.bis.wantersForItems(body.itemIds);
+    const body = z.object({ itemIds: z.array(z.number().int()).max(500), difficulty: z.enum(["normal", "heroic", "mythic"]).optional() }).parse(req.body);
+    return ctx.bis.wantersForItems(body.itemIds, body.difficulty);
   });
 
   app.get("/api/bis/manual", async (req) => {

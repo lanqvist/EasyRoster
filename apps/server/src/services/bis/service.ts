@@ -10,6 +10,8 @@ import {
   type CharacterRow,
   type ItemWanter,
   type ObtainedStatus,
+  type RaidDifficulty,
+  type SourceKind,
 } from "@easyroster/core";
 import type { ConfigService } from "../config.js";
 import type { Db } from "../db.js";
@@ -238,7 +240,34 @@ export class BisService {
     this.historyCache = null;
   }
 
-  characterBis(character: CharacterRow, specId?: number): BisCharacterView | null {
+  /** Тип источника инстанса по сезону. */
+  sourceKindOf(instanceId: number): SourceKind {
+    const s = this.config.get().season;
+    if (s.dungeonInstanceIds.includes(instanceId) || instanceId === -1) return "mplus";
+    if (s.raidInstanceIds.includes(instanceId)) {
+      const inst = this.staticData.instance(instanceId);
+      return inst && inst.encounters.length <= 1 ? "world" : "raid";
+    }
+    const inst = this.staticData.instance(instanceId);
+    if (inst?.type === "raid") return "raid";
+    if (inst?.type === "mplus-chest" || inst?.type === "expansion-dungeon" || inst?.type === "dungeon") return "mplus";
+    return "other";
+  }
+
+  /** трек → ilvl для сезона (из bonuses) */
+  trackIlvls(): Map<string, number | null> {
+    const seasonId = this.config.get().season.seasonId;
+    const out = new Map<string, number | null>();
+    for (const b of this.staticData.getBonuses().values()) {
+      const u = b.upgrade;
+      if (!u || u.level !== 1) continue;
+      if (seasonId != null ? u.seasonId !== seasonId : u.seasonId == null) continue;
+      out.set(u.name, u.itemLevel ?? b.itemLevel?.amount ?? null);
+    }
+    return out;
+  }
+
+  characterBis(character: CharacterRow, specId?: number, opts: { difficulty?: RaidDifficulty } = {}): BisCharacterView | null {
     const spec = specId ?? character.activeSpecId;
     if (!spec) return null;
     const cfg = this.config.get();
@@ -267,6 +296,10 @@ export class BisService {
       simMaxAgeMs: cfg.bis.simMaxAgeDays * 86400000,
       now: Date.now(),
       won: this.wonFor(character),
+      sourceKindOf: (id) => this.sourceKindOf(id),
+      raidDifficulty: opts.difficulty ?? cfg.season.raidDifficulty,
+      trackIlvl: this.trackIlvls(),
+      dungeonTrack: cfg.sim.dungeonTracks[0] ?? "Hero",
     });
   }
 
@@ -303,13 +336,13 @@ export class BisService {
   }
 
   /** Кому из ростера нужен предмет (учитывая тир-токены и катализатор). */
-  wanters(itemId: number): ItemWanter[] {
+  wanters(itemId: number, difficulty?: RaidDifficulty): ItemWanter[] {
     const item = this.staticData.item(itemId);
     const targetIds = new Set<number>([itemId]);
     if (item?.contains) for (const id of item.contains) targetIds.add(id);
     const out: ItemWanter[] = [];
     for (const c of this.chars.listRaiders()) {
-      const view = this.characterBis(c);
+      const view = this.characterBis(c, undefined, { difficulty });
       if (!view) continue;
       for (const s of view.slots) {
         for (const e of s.entries) {
@@ -327,8 +360,11 @@ export class BisService {
             score: e.score,
             obtained: e.obtained,
             obtainedDetail: e.obtainedDetail,
-            upgradePct: sim?.score ?? null,
+            upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
             equippedIlvl: eqIlvl,
+            simTrack: e.simSelected?.track ?? null,
+            alt: e.alternatives,
+            sourceKind: e.sourceKind,
           });
         }
       }
@@ -340,11 +376,11 @@ export class BisService {
   }
 
   /** Карта itemId → wanters для набора предметов (страница лута). */
-  wantersForItems(itemIds: number[]): Record<number, ItemWanter[]> {
+  wantersForItems(itemIds: number[], difficulty?: RaidDifficulty): Record<number, ItemWanter[]> {
     // один проход по ростеру, чтобы не пересчитывать BiS N раз
     const views = this.chars
       .listRaiders()
-      .map((c) => ({ c, view: this.characterBis(c) }))
+      .map((c) => ({ c, view: this.characterBis(c, undefined, { difficulty }) }))
       .filter((x): x is { c: CharacterRow; view: BisCharacterView } => !!x.view);
     const result: Record<number, ItemWanter[]> = {};
     const items = this.staticData.items(itemIds);
@@ -360,8 +396,9 @@ export class BisService {
             const sim = e.sources.find((x) => isSimSource(x.source));
             list.push({
               characterId: c.id, name: c.name, realmName: c.realmName, classId: c.classId, specId: view.specId, slot: s.slot,
-              rank: e.rank, score: e.score, obtained: e.obtained, obtainedDetail: e.obtainedDetail, upgradePct: sim?.score ?? null,
+              rank: e.rank, score: e.score, obtained: e.obtained, obtainedDetail: e.obtainedDetail, upgradePct: e.simSelected?.pct ?? sim?.score ?? null,
               equippedIlvl: s.equipped.length ? Math.min(...s.equipped.map((x) => x.ilvl ?? 0)) : null,
+              simTrack: e.simSelected?.track ?? null, alt: e.alternatives, sourceKind: e.sourceKind,
             });
           }
         }

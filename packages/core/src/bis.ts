@@ -52,6 +52,31 @@ export interface BisCandidateRow extends ParsedCandidate {
 
 export type ObtainedStatus = "yes" | "lower" | "catalyst" | "no";
 
+/** Тип источника предмета. */
+export type SourceKind = "raid" | "mplus" | "vault" | "catalyst" | "craft" | "world" | "other";
+export type RaidDifficulty = "normal" | "heroic" | "mythic";
+export const RAID_DIFFICULTY_TRACK: Record<RaidDifficulty, string> = { normal: "Champion", heroic: "Hero", mythic: "Myth" };
+export const RAID_DIFFICULTY_LABEL: Record<RaidDifficulty, string> = { normal: "Normal", heroic: "Heroic", mythic: "Mythic" };
+
+export interface AltRef {
+  itemId: number;
+  name: string;
+  pct: number;
+  kind: SourceKind;
+  sourceName: string;
+}
+
+export interface BisAlternatives {
+  /** лучшая альтернатива из другого источника (любого) */
+  best: AltRef | null;
+  /** лучшая фармабельная (M+/крафт) */
+  farmable: AltRef | null;
+  /** незаменимость: pct предмета − pct фармабельной альтернативы (если её нет — pct предмета) */
+  gap: number | null;
+  /** сколько альтернатив ≥ 95 % ценности предмета */
+  count: number;
+}
+
 export interface BisEntry {
   slot: string;
   rank: number; // итоговое место в слоте (1 = BiS)
@@ -65,7 +90,20 @@ export interface BisEntry {
   score: number; // итоговый балл объединения
   sources: Array<{ source: BisSource; list: BisList; rank: number; score: number | null; note: string | null; meta?: SimCandidateMeta | Record<string, unknown> | null }>;
   /** откуда падает (по справочнику) */
-  drops: Array<{ instanceId: number; instanceName: string; encounterId: number; encounterName: string }>;
+  drops: Array<{ instanceId: number; instanceName: string; encounterId: number; encounterName: string; kind: SourceKind }>;
+  /** основной тип источника */
+  sourceKind: SourceKind;
+  /** трек, на котором предмет BiS по источнику (из bonusID гайда) */
+  bisTrack: { name: string; ilvl: number | null } | null;
+  /** трек и ilvl предмета для выбранной сложности рейда / M+ */
+  dropTrack: { name: string; ilvl: number | null } | null;
+  /** % сима по трекам (simc) */
+  simByTrack: Record<string, number> | null;
+  /** % сима для выбранной сложности (или лучший, если трека нет) */
+  simSelected: { track: string | null; pct: number } | null;
+  /** лучшее из надетого в слоте: трек/ilvl */
+  equippedBest: { ilvl: number | null; track: string | null } | null;
+  alternatives: BisAlternatives | null;
   obtained: ObtainedStatus;
   obtainedDetail: string | null; // «Герой 4/6», «есть рейдовый предмет — нужен Катализатор» …
   isTier: boolean;
@@ -111,8 +149,44 @@ export interface ItemWanter {
   score: number;
   obtained: ObtainedStatus;
   obtainedDetail: string | null;
-  upgradePct: number | null; // из персонального сима, если есть
+  upgradePct: number | null; // из персонального сима, если есть (для выбранной сложности)
   equippedIlvl: number | null;
+  simTrack?: string | null;
+  alt?: BisAlternatives | null;
+  sourceKind?: SourceKind;
+}
+
+export interface TierRow {
+  characterId: number;
+  name: string;
+  realmName: string;
+  classId: number;
+  className: string;
+  specId: number | null;
+  setId: number | null;
+  pieces: number;
+  owned: string[];
+  missing: string[];
+  /** надетые не-тир предметы в тир-слотах, пригодные для Катализатора */
+  catalyzable: string[];
+  val2: number | null; // % ценности 2pc (сим)
+  val4: number | null; // % ценности 4pc (сим)
+  simAt: number | null;
+  toFour: number;
+  priority: number | null;
+  missingTokens: Array<{ slot: string; itemId: number | null; tokens: Array<{ tokenId: number; name: string; encounterName: string }> }>;
+}
+
+export interface TierTokenView {
+  tokenId: number;
+  name: string;
+  icon: string | null;
+  instanceName: string;
+  encounterName: string;
+  wanters: Array<{
+    characterId: number; name: string; classId: number; specId: number; slot: string; obtained: ObtainedStatus;
+    pieces: number; closes: 0 | 2 | 4 | 5; piecePct: number | null; val4: number | null; priority: number | null;
+  }>;
 }
 
 export interface BisSourceStatus {

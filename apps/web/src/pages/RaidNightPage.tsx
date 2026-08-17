@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
 import { api } from "../lib/api";
+import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
+import { KIND_LABEL } from "../components/SourceChips";
 import { useConfig } from "../lib/config-context";
 import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
@@ -12,6 +14,7 @@ import { CharacterDrawer } from "../components/CharacterDrawer";
  * (тот же расчёт, что видит совет в RCLootCouncil через колонку BiS). Ниже — свежая история лута RCLC.
  */
 export function RaidNightPage() {
+  const { difficulty } = useDifficulty();
   const { config } = useConfig();
   const [instances, setInstances] = useState<{ season: StaticDataStatus["season"]; all: InstanceRow[] } | null>(null);
   const [instanceId, setInstanceId] = useState<number | null>(null);
@@ -44,10 +47,10 @@ export function RaidNightPage() {
         setView(v);
         setEncounterId(v.encounters[0]?.id ?? null);
         setSelectedItem(null);
-        setWanters(await api.bisWanters(v.encounters.flatMap((e) => e.items.map((i) => i.id))));
+        setWanters(await api.bisWanters(v.encounters.flatMap((e) => e.items.map((i) => i.id)), difficulty));
       })
       .catch((e) => setErr((e as Error).message));
-  }, [instanceId]);
+  }, [instanceId, difficulty]);
 
   const enc = view?.encounters.find((e) => e.id === encounterId) ?? null;
   const items = useMemo(() => {
@@ -63,7 +66,10 @@ export function RaidNightPage() {
 
   return (
     <div>
-      <h1>Лут-ночь</h1>
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <h1>Лут-ночь</h1>
+        <DifficultySwitch />
+      </div>
       <WowIntegrationCard compact />
       {err && <div className="alert bad">{err}</div>}
 
@@ -139,7 +145,9 @@ export function RaidNightPage() {
                       <th>Слот</th>
                       <th className="num">#</th>
                       <th>Статус</th>
-                      <th className="num">Апгрейд</th>
+                      <th className="num" title="% сима для выбранной сложности">Апгрейд</th>
+                      <th title="Лучшая фармабельная альтернатива (M+/крафт)">Альтернатива</th>
+                      <th className="num" title="Незаменимость: апгрейд минус фармабельная альтернатива">▲ Gap</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -154,7 +162,20 @@ export function RaidNightPage() {
                           <td className="muted">{SLOT_NAMES_RU[w.slot] ?? w.slot}</td>
                           <td className="num">{w.rank}</td>
                           <td style={{ color: st.color }} title={w.obtainedDetail ?? ""}>{st.label}{w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}</td>
-                          <td className="num">{w.upgradePct != null ? `+${w.upgradePct}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}</td>
+                          <td className="num" style={{ color: w.upgradePct != null && w.upgradePct > 0 ? "var(--ok)" : undefined }}>
+                            {w.upgradePct != null ? `${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}
+                            {w.simTrack && <span className="muted" style={{ fontSize: 11 }}> {w.simTrack}</span>}
+                          </td>
+                          <td className="muted" style={{ fontSize: 12 }}>
+                            {(() => {
+                              const a = w.alt?.farmable ?? w.alt?.best;
+                              if (!a) return "—";
+                              return `${a.name} (${KIND_LABEL[a.kind]}) ${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}%`;
+                            })()}
+                          </td>
+                          <td className="num" style={{ color: w.alt?.gap == null ? undefined : w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)", fontWeight: 600 }}>
+                            {w.alt?.gap != null ? `▲${w.alt.gap.toFixed(1)}` : ""}
+                          </td>
                         </tr>
                       );
                     })}

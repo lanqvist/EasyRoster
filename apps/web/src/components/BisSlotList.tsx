@@ -1,5 +1,6 @@
 import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type BisCharacterView, type BisEntry, type ObtainedStatus } from "@easyroster/core";
 import { QUALITY_COLORS_NUM } from "../lib/format";
+import { AltLine, SourceChips } from "./SourceChips";
 
 export const OBTAINED_STYLE: Record<ObtainedStatus, { color: string; label: string; bg: string }> = {
   yes: { color: "var(--ok)", label: "есть", bg: "rgba(79,191,122,.15)" },
@@ -72,10 +73,10 @@ export function BisSlotList({
                         {(ru && e.itemNameRu) || e.itemName}
                       </a>
                       {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}
-                      <div className="muted" style={{ fontSize: 11 }}>
-                        {e.drops.map((d) => `${d.encounterName}`).slice(0, 2).join(", ")}
-                        {e.drops.length === 0 && e.sources[0]?.note ? e.sources[0].note : ""}
+                      <div style={{ marginTop: 2 }}>
+                        <SourceChips e={e} />
                       </div>
+                      <AltLine e={e} />
                     </td>
                     <td className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }} title={e.sources.map((x) => `${SOURCE_LABEL[x.source]} ${x.list} #${x.rank}${x.score != null ? ` (${x.score})` : ""}`).join("\n")}>
                       {[...new Set(e.sources.map((x) => SOURCE_LABEL[x.source]))].join(" + ")}

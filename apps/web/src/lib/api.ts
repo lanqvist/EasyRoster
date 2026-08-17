@@ -17,6 +17,8 @@ import type {
   RealmOption,
   SyncStatus,
   SimStatus,
+  TierRow,
+  TierTokenView,
 } from "@easyroster/core";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -51,10 +53,11 @@ export const api = {
   bisStatus: () => request<{ sources: BisSourceStatus[]; progress: { source: string; done: number; total: number; current: string } | null }>("/api/bis/status"),
   bisRefresh: (source: "icyveins" | "wcl", body: { specIds?: number[]; all?: boolean } = {}) =>
     request<{ started: true }>(`/api/bis/sources/${source}/refresh`, { method: "POST", body: JSON.stringify(body) }),
-  bisCharacter: (id: number, spec?: number) => request<BisCharacterView>(`/api/bis/character/${id}${spec ? `?spec=${spec}` : ""}`),
+  bisCharacter: (id: number, spec?: number, difficulty?: string) =>
+    request<BisCharacterView>(`/api/bis/character/${id}?${spec ? `spec=${spec}&` : ""}${difficulty ? `difficulty=${difficulty}` : ""}`),
   bisTeam: () => request<BisTeamRow[]>("/api/bis/team"),
-  bisItem: (itemId: number) => request<ItemWanter[]>(`/api/bis/item/${itemId}`),
-  bisWanters: (itemIds: number[]) => request<Record<number, ItemWanter[]>>("/api/bis/wanters", { method: "POST", body: JSON.stringify({ itemIds }) }),
+  bisItem: (itemId: number, difficulty?: string) => request<ItemWanter[]>(`/api/bis/item/${itemId}${difficulty ? `?difficulty=${difficulty}` : ""}`),
+  bisWanters: (itemIds: number[], difficulty?: string) => request<Record<number, ItemWanter[]>>("/api/bis/wanters", { method: "POST", body: JSON.stringify({ itemIds, difficulty }) }),
   bisManualAdd: (body: { characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note?: string | null }) =>
     request<{ id: number }>("/api/bis/manual", { method: "POST", body: JSON.stringify(body) }),
   bisManualDelete: (id: number) => request<{ ok: true }>(`/api/bis/manual/${id}`, { method: "DELETE" }),
@@ -79,6 +82,7 @@ export const api = {
     request<{ reportId: string; results: number; candidates: number; warning: string | null }>("/api/bis/droptimizer", { method: "POST", body: JSON.stringify({ characterId, url }) }),
   bisSim: (characterId: number) =>
     request<{ id: number; kind: string; url: string | null; simDate: number | null; importedAt: number; baselineDps: number | null; fightStyle: string | null } | null>(`/api/bis/sim/${characterId}`),
+  tier: () => request<{ rows: TierRow[]; tokens: TierTokenView[] }>("/api/tier"),
   simStatus: () => request<SimStatus>("/api/sim/status"),
   simInstall: () => request<{ started: true }>("/api/sim/install", { method: "POST" }),
   simRun: (body: { ids?: number[]; all?: boolean; onlyStale?: boolean }) => request<{ queued: number }>("/api/sim/run", { method: "POST", body: JSON.stringify(body) }),

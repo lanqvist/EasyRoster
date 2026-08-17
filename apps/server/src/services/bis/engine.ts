@@ -10,6 +10,11 @@ import {
   type ItemRow,
   type ObtainedStatus,
   type BisSource,
+  type SourceKind,
+  type RaidDifficulty,
+  type AltRef,
+  type BisAlternatives,
+  RAID_DIFFICULTY_TRACK,
   isSimSource,
 } from "@easyroster/core";
 import type { ManualRule } from "./repo.js";
@@ -31,6 +36,36 @@ export interface EngineInput {
   now: number;
   /** предметы, полученные по истории RCLootCouncil: itemId → ts */
   won?: Map<number, number>;
+  /** тип источника инстанса (рейд сезона / M+ / мировой босс) */
+  sourceKindOf?: (instanceId: number) => SourceKind;
+  /** выбранная сложность рейда → трек */
+  raidDifficulty?: RaidDifficulty;
+  /** трек → ilvl (сезон) */
+  trackIlvl?: Map<string, number | null>;
+  /** трек M+ дропа (по умолчанию Hero) */
+  dungeonTrack?: string;
+}
+
+function trackNameOf(bonusIds: number[], bonuses: ReadonlyMap<number, BonusEntry>): string | null {
+  return decodeTrack(bonusIds, bonuses)?.name ?? null;
+}
+
+/** Классификация записи по источникам дропа и заметкам гайдов. */
+function classifyKind(
+  drops: Array<{ instanceId: number; kind: SourceKind }>,
+  originalItemId: number | null,
+  notes: Array<string | null>,
+): SourceKind {
+  if (originalItemId) return "catalyst";
+  const kinds = new Set(drops.map((d) => d.kind));
+  if (kinds.has("raid")) return "raid";
+  if (kinds.has("mplus")) return "mplus";
+  if (kinds.has("world")) return "world";
+  const note = notes.filter(Boolean).join(" ").toLowerCase();
+  if (/craft|крафт|profession/.test(note)) return "craft";
+  if (/vault|тайник/.test(note)) return "vault";
+  if (/catalyst|катализ/.test(note)) return "catalyst";
+  return drops.length ? "other" : "other";
 }
 
 /** Балл кандидата внутри источника (0..100). */
@@ -70,6 +105,10 @@ function trackLabel(bonusIds: number[], bonuses: ReadonlyMap<number, BonusEntry>
 
 export function buildCharacterBis(input: EngineInput): BisCharacterView {
   const { candidates, manual, equipment, items, bonuses, weights, perSlot } = input;
+  const raidTrack = RAID_DIFFICULTY_TRACK[input.raidDifficulty ?? "normal"];
+  const dungeonTrack = input.dungeonTrack ?? "Hero";
+  const kindOf = input.sourceKindOf ?? (() => "other" as SourceKind);
+  const ilvlOf = (t: string | null) => (t ? input.trackIlvl?.get(t) ?? null : null);
   const excluded = new Set(manual.filter((m) => m.action === "exclude").map((m) => `${m.slot}|${m.itemId}`));
   const pinned = new Map(manual.filter((m) => m.action === "pin").map((m) => [`${m.slot}|${m.itemId}`, m]));
 
@@ -135,8 +174,31 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
       const { obtained, detail } = obtainedStatus({ itemId, item, originalItemId: e.originalItemId, equipped, bonuses, won: input.won });
 
       const drops = new Map<string, BisEntry["drops"][number]>();
-      for (const d of input.itemSources(itemId)) drops.set(`${d.instanceId}|${d.encounterId}`, d);
-      if (e.originalItemId) for (const d of input.itemSources(e.originalItemId)) drops.set(`${d.instanceId}|${d.encounterId}`, d);
+      for (const d of input.itemSources(itemId)) drops.set(`${d.instanceId}|${d.encounterId}`, { ...d, kind: kindOf(d.instanceId) });
+      if (e.originalItemId) for (const d of input.itemSources(e.originalItemId)) drops.set(`${d.instanceId}|${d.encounterId}`, { ...d, kind: kindOf(d.instanceId) });
+      const dropList = [...drops.values()];
+      const sourceKind = classifyKind(dropList, e.originalItemId, e.cands.map((c) => c.sourceNote));
+      const bisTrackName = trackNameOf(e.bonusIds, bonuses);
+      const dropTrackName = sourceKind === "raid" || sourceKind === "catalyst" || sourceKind === "world" ? raidTrack : sourceKind === "mplus" ? dungeonTrack : sourceKind === "vault" ? "Myth" : bisTrackName;
+      // сим по трекам
+      const simByTrack: Record<string, number> = {};
+      let simBest: number | null = null;
+      for (const c of e.cands) {
+        if (!isSimSource(c.source) || c.score == null) continue;
+        const tr = (c.meta as { track?: string } | null)?.track;
+        if (tr) simByTrack[tr] = Math.max(simByTrack[tr] ?? -Infinity, c.score);
+        simBest = Math.max(simBest ?? -Infinity, c.score);
+      }
+      const hasSimTracks = Object.keys(simByTrack).length > 0;
+      const simSelected =
+        simBest == null
+          ? null
+          : hasSimTracks && dropTrackName && simByTrack[dropTrackName] != null
+            ? { track: dropTrackName, pct: simByTrack[dropTrackName]! }
+            : { track: hasSimTracks ? (Object.entries(simByTrack).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null) : null, pct: simBest };
+      const eqBest = equipped.length
+        ? equipped.reduce((a, b) => ((b.ilvl ?? 0) > (a.ilvl ?? 0) ? b : a))
+        : null;
 
       entries.push({
         slot,
@@ -150,7 +212,14 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
         originalItemId: e.originalItemId,
         score: Math.round(score * 10) / 10,
         sources: e.cands.map((c) => ({ source: c.source, list: c.list, rank: c.rank, score: c.score, note: c.sourceNote, meta: c.meta ?? null })),
-        drops: [...drops.values()],
+        drops: dropList,
+        sourceKind,
+        bisTrack: bisTrackName ? { name: bisTrackName, ilvl: ilvlOf(bisTrackName) } : null,
+        dropTrack: dropTrackName ? { name: dropTrackName, ilvl: ilvlOf(dropTrackName) } : null,
+        simByTrack: hasSimTracks ? simByTrack : null,
+        simSelected,
+        equippedBest: eqBest ? { ilvl: eqBest.ilvl, track: trackNameOf(eqBest.bonusIds, bonuses) ?? eqBest.trackName } : null,
+        alternatives: null,
         obtained,
         obtainedDetail: detail,
         isTier,
@@ -158,6 +227,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
     }
     entries.sort((a, b) => b.score - a.score || a.itemName.localeCompare(b.itemName));
     entries.forEach((en, i) => (en.rank = i + 1));
+    computeAlternatives(entries);
     const top = entries.slice(0, perSlot);
 
     // покрытие: парные слоты — первые 2 записи, остальные — 1
@@ -203,6 +273,44 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
     sourcesUsed: [...sourcesUsed.entries()].map(([source, s]) => ({ source, ...s })),
     personalSim: simFresh ? { fetchedAt: Math.max(...simCands.map((c) => c.fetchedAt)), label: newestSource === "simc" ? "SimC (авто)" : (simCands[0]?.sourceNote ?? "Droptimizer") } : null,
   };
+}
+
+/** Альтернативы по слоту: другой источник (нет общего босса), фармабельные — M+/крафт. */
+export function computeAlternatives(entries: BisEntry[]): void {
+  const encSet = (e: BisEntry) => new Set(e.drops.map((d) => `${d.instanceId}|${d.encounterId}`));
+  const toRef = (o: BisEntry): AltRef => ({
+    itemId: o.itemId,
+    name: o.itemNameRu ?? o.itemName,
+    pct: o.simSelected?.pct ?? 0,
+    kind: o.sourceKind,
+    sourceName: o.drops[0]?.encounterName ?? o.sources[0]?.note ?? "",
+  });
+  for (const e of entries) {
+    const mine = encSet(e);
+    const others = entries.filter((o) => o !== e && o.itemId !== e.itemId && ![...encSet(o)].some((k) => mine.has(k)));
+    if (e.simSelected) {
+      const withSim = others.filter((o) => o.simSelected);
+      const best = withSim.reduce<BisEntry | null>((a, o) => (!a || o.simSelected!.pct > a.simSelected!.pct ? o : a), null);
+      const farm = withSim.filter((o) => o.sourceKind === "mplus" || o.sourceKind === "craft").reduce<BisEntry | null>((a, o) => (!a || o.simSelected!.pct > a.simSelected!.pct ? o : a), null);
+      const alt: BisAlternatives = {
+        best: best ? toRef(best) : null,
+        farmable: farm ? toRef(farm) : null,
+        gap: Math.round((e.simSelected.pct - Math.max(0, farm?.simSelected?.pct ?? 0)) * 100) / 100,
+        count: withSim.filter((o) => o.simSelected!.pct >= e.simSelected!.pct * 0.95 && o.simSelected!.pct > 0).length,
+      };
+      e.alternatives = alt;
+    } else {
+      // без сима — по баллу объединения
+      const best = others.reduce<BisEntry | null>((a, o) => (!a || o.score > a.score ? o : a), null);
+      const farm = others.filter((o) => o.sourceKind === "mplus" || o.sourceKind === "craft").reduce<BisEntry | null>((a, o) => (!a || o.score > a.score ? o : a), null);
+      e.alternatives = {
+        best: best ? { ...toRef(best), pct: best.score } : null,
+        farmable: farm ? { ...toRef(farm), pct: farm.score } : null,
+        gap: null,
+        count: others.filter((o) => o.score >= e.score * 0.95).length,
+      };
+    }
+  }
 }
 
 export function obtainedStatus(args: {
