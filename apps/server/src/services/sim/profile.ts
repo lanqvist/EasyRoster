@@ -1,4 +1,7 @@
+import { createRequire } from "node:module";
 import { CLASS_IDS, SPEC_BY_ID, type CharacterRow, type EquipmentRow } from "@easyroster/core";
+
+const require = createRequire(import.meta.url);
 
 /** Генерация simc-профиля персонажа из данных БД (без обращения к армори). */
 
@@ -62,4 +65,28 @@ export function buildSimcProfile(input: ProfileInput): { text: string; slots: st
     slots.push(slot);
   }
   return { text: lines.join("\n") + "\n", slots };
+}
+
+/** Таланты по умолчанию из штатных профилей SimC (profiles/<последний тир>/<Tier>_<Class>_<Spec>.simc). */
+export function defaultTalentsFromProfiles(simcExePath: string, classId: number, specId: number): { talents: string; source: string } | null {
+  const fs = require("node:fs") as typeof import("node:fs");
+  const path = require("node:path") as typeof import("node:path");
+  const classFile = CLASS_IDS[classId as keyof typeof CLASS_IDS];
+  const spec = SPEC_BY_ID.get(specId);
+  if (!classFile || !spec) return null;
+  const CLASS_FILE_NAME: Record<string, string> = {
+    WARRIOR: "Warrior", PALADIN: "Paladin", HUNTER: "Hunter", ROGUE: "Rogue", PRIEST: "Priest", DEATHKNIGHT: "Death_Knight", SHAMAN: "Shaman",
+    MAGE: "Mage", WARLOCK: "Warlock", MONK: "Monk", DRUID: "Druid", DEMONHUNTER: "Demon_Hunter", EVOKER: "Evoker",
+  };
+  const profilesDir = path.join(path.dirname(simcExePath), "profiles");
+  if (!fs.existsSync(profilesDir)) return null;
+  const tiers = fs.readdirSync(profilesDir).filter((d) => /^[A-Z]+\d+$/.test(d) && fs.statSync(path.join(profilesDir, d)).isDirectory()).sort();
+  const specName = spec.name.replace(/\s+/g, "_");
+  for (const tier of tiers.reverse()) {
+    const file = path.join(profilesDir, tier, `${tier}_${CLASS_FILE_NAME[classFile]}_${specName}.simc`);
+    if (!fs.existsSync(file)) continue;
+    const m = /^talents=(\S+)/m.exec(fs.readFileSync(file, "utf8"));
+    if (m) return { talents: m[1]!, source: `${tier}` };
+  }
+  return null;
 }

@@ -11,7 +11,7 @@ import type { CharactersRepo } from "../characters-repo.js";
 import type { BisRepo } from "../bis/repo.js";
 import type { Logger } from "../../context.js";
 import { SimcRunner } from "./simc-runner.js";
-import { buildSimcProfile } from "./profile.js";
+import { buildSimcProfile, defaultTalentsFromProfiles } from "./profile.js";
 import { buildSimCandidates, profilesetLine, trackBonusIds, type SimCandidate } from "./candidates.js";
 
 /**
@@ -205,12 +205,30 @@ export class SimService {
 
       // --- запуск
       this.current = { characterId: c.id, name: c.name, stage: `sim 0/${cands.length}`, startedAt: Date.now() };
-      const res = await this.runner.run(info.path, "input.simc", dir, path.join(dir, "result.json"), {
-        onProgress: (line) => {
-          const m = /Profilesets[^:]*:\s*(\d+)\/(\d+)/.exec(line);
-          if (m && this.current) this.current.stage = `sim ${m[1]}/${m[2]}`;
-        },
-      });
+      const runOnce = () =>
+        this.runner.run(info.path!, "input.simc", dir, path.join(dir, "result.json"), {
+          onProgress: (line) => {
+            const m = /Profilesets[^:]*:\s*(\d+)\/(\d+)/.exec(line);
+            if (m && this.current) this.current.stage = `sim ${m[1]}/${m[2]}`;
+          },
+        });
+      let res;
+      let talentsNote = "";
+      try {
+        res = await runOnce();
+      } catch (e) {
+        const msg = (e as Error).message;
+        // simc не принял код талантов (новый формат/повреждён) — повторяем с талантами по умолчанию
+        if (/Hash|talent/i.test(msg) && profile.text.includes("talents=")) {
+          const def = defaultTalentsFromProfiles(info.path!, c.classId, specId);
+          const lines2 = fs.readFileSync(input, "utf8").split("\n").filter((l) => !l.startsWith("talents="));
+          if (def) lines2.splice(lines2.findIndex((l) => l.startsWith("spec=")) + 1, 0, `talents=${def.talents}`);
+          fs.writeFileSync(input, lines2.join("\n"), "utf8");
+          this.log.warn(`sim ${c.name}: код талантов отклонён simc, использую таланты ${def ? `из профиля SimC ${def.source}` : "по умолчанию"}`);
+          talentsNote = def ? ` (таланты из профиля SimC ${def.source})` : " (без талантов!)";
+          res = await runOnce();
+        } else throw e;
+      }
 
       // --- разбор
       const parsed = this.parseResult(res.json, cands, role, simCfg.tankWeights, simCfg.fightStyle);
@@ -221,7 +239,7 @@ export class SimService {
       });
       this.db.conn
         .prepare("UPDATE sim_runs SET finished_at = ?, ok = 1, message = ?, profilesets = ?, baseline = ?, elapsed_ms = ? WHERE id = ?")
-        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с`, cands.length, parsed.baseline, res.elapsedMs, runId);
+        .run(Date.now(), `OK: ${cands.length} профильсетов за ${Math.round(res.elapsedMs / 1000)} с${talentsNote}`, cands.length, parsed.baseline, res.elapsedMs, runId);
       this.log.info(`sim ${c.name}: ${cands.length} профильсетов, base ${Math.round(parsed.baseline)}, ${Math.round(res.elapsedMs / 1000)} с`);
       return { profilesets: cands.length, baseline: parsed.baseline, elapsedMs: res.elapsedMs };
     } catch (e) {
