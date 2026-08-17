@@ -15,9 +15,9 @@ end
 
 --- Значение сортировки для строки (кэшируется в data[realrow].cols[column].value)
 local function rowValue(name)
-	local itemID = currentItemID()
+	local itemID, it = currentItemID()
 	if not itemID then return -1 end
-	return ER:SortValue(ER:GetEntry(itemID, name))
+	return ER:SortValue(ER:GetEntry(itemID, name), ER:TrackOfLink(it and it.link))
 end
 
 function VF.SetCell(rowFrame, frame, data, cols, row, realrow, column, fShow, table, ...)
@@ -28,19 +28,20 @@ function VF.SetCell(rowFrame, frame, data, cols, row, realrow, column, fShow, ta
 	end
 	if not (data and data[realrow]) then return end
 	local name = data[realrow].name
-	local itemID = currentItemID()
+	local itemID, it = currentItemID()
 	local entry = itemID and ER:GetEntry(itemID, name) or nil
+	local track = ER:TrackOfLink(it and it.link)
 
 	local text
 	if not ER:HasData() then
 		text = "|cff9a9dabнет данных|r"
 	elseif entry then
-		text = ER:FormatEntry(entry)
+		text = ER:FormatEntry(entry, track)
 	else
 		text = "|cff5a5d6a—|r"
 	end
 	frame.text:SetText(text)
-	data[realrow].cols[column].value = ER:SortValue(entry)
+	data[realrow].cols[column].value = ER:SortValue(entry, track)
 
 	frame:SetScript("OnEnter", function()
 		local lines = ER:TooltipLines(entry, name)

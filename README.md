@@ -82,3 +82,4 @@ data/           config.json, easyroster.sqlite, кэши (не в git)
 - [x] Фаза 3 — движок BiS (Icy Veins + Warcraft Logs + ручные правки), страница BiS, «кому нужно»
 - [x] Фаза 4 — аддон RCLootCouncil_EasyRoster, db.lua, импорт истории RCLC и рангов, «Лут-ночь»
 - [x] Фаза 5 — импорт Droptimizer, автообновление источников/db.lua/истории, скрипт запуска
+- [x] Фаза 6 — автосим SimulationCraft (ДД + танки), % по трекам в RCLootCouncil (см. [docs/AUTOSIM.md](docs/AUTOSIM.md))

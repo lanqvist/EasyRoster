@@ -199,6 +199,25 @@ const MIGRATIONS: string[] = [
   ALTER TABLE characters ADD COLUMN officer_note TEXT;
   ALTER TABLE characters ADD COLUMN rank_name TEXT;
   `,
+  // v6 — фаза 6: автосим SimulationCraft
+  `
+  ALTER TABLE characters ADD COLUMN race_id INTEGER;
+  ALTER TABLE bis_candidates ADD COLUMN meta TEXT;
+  CREATE TABLE IF NOT EXISTS sim_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL,
+    spec_id INTEGER,
+    started_at INTEGER NOT NULL,
+    finished_at INTEGER,
+    ok INTEGER,
+    message TEXT,
+    profilesets INTEGER,
+    baseline REAL,
+    elapsed_ms INTEGER,
+    equipment_hash TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_sim_runs_char ON sim_runs(character_id, id);
+  `,
 ];
 
 export class Db {

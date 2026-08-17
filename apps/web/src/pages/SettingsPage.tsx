@@ -14,6 +14,18 @@ export function SettingsPage() {
   const [interval, setInterval_] = useState(config?.sync.intervalMinutes ?? 30);
   const [guidesDays, setGuidesDays] = useState(config?.sync.guidesRefreshDays ?? 7);
   const [autoExport, setAutoExport] = useState(config?.sync.autoExportLua ?? true);
+  const [sim, setSim] = useState(() => ({
+    enabled: config?.sim.enabled ?? false,
+    autoAfterSync: config?.sim.autoAfterSync ?? true,
+    fightStyle: config?.sim.fightStyle ?? "Patchwerk",
+    targetError: config?.sim.targetError ?? 0.4,
+    threads: config?.sim.threads ?? 0,
+    raidTracks: config?.sim.raidTracks ?? ["Hero", "Myth"],
+    dungeonTracks: config?.sim.dungeonTracks ?? ["Hero"],
+    tankWeights: config?.sim.tankWeights ?? { dps: 0.4, dtps: 0.5, hps: 0.1 },
+    maxAgeDays: config?.sim.maxAgeDays ?? 7,
+    simcPath: config?.sim.simcPath ?? "",
+  }));
   const [bnetId, setBnetId] = useState(config?.blizzard.clientId ?? "");
   const [bnetSecret, setBnetSecret] = useState("");
   const [wclId, setWclId] = useState(config?.warcraftLogs.clientId ?? "");
@@ -30,6 +42,7 @@ export function SettingsPage() {
         rankLabels: labels,
         wowRetailPath: wowPath,
         sync: { intervalMinutes: interval, guidesRefreshDays: guidesDays, autoExportLua: autoExport },
+        sim: sim as any,
         blizzard: { clientId: bnetId, clientSecret: bnetSecret },
         warcraftLogs: { clientId: wclId, clientSecret: wclSecret },
       });
@@ -100,6 +113,74 @@ export function SettingsPage() {
               onChange={(e) => setWclSecret(e.target.value)}
               placeholder={config.warcraftLogs.hasSecret ? "(сохранён)" : ""}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Автосим SimulationCraft</h2>
+        <div className="grid-2">
+          <label className="row" style={{ gap: 6 }}>
+            <input type="checkbox" checked={sim.enabled} onChange={(e) => setSim({ ...sim, enabled: e.target.checked })} /> включить автосим
+          </label>
+          <label className="row" style={{ gap: 6 }}>
+            <input type="checkbox" checked={sim.autoAfterSync} onChange={(e) => setSim({ ...sim, autoAfterSync: e.target.checked })} /> запускать после синка при смене экипировки
+          </label>
+          <div className="field">
+            <label>Fight style</label>
+            <select value={sim.fightStyle} onChange={(e) => setSim({ ...sim, fightStyle: e.target.value as typeof sim.fightStyle })}>
+              {["Patchwerk", "HecticAddCleave", "DungeonSlice", "LightMovement", "HeavyMovement"].map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Точность (target_error, %)</label>
+            <input type="number" step={0.05} min={0.05} max={2} value={sim.targetError} onChange={(e) => setSim({ ...sim, targetError: Number(e.target.value) })} />
+            <span className="hint">0.4 — быстро (≈20–60 с/персонаж), 0.2 — как Raidbots</span>
+          </div>
+          <div className="field">
+            <label>Треки рейда</label>
+            <div className="row">
+              {["Champion", "Hero", "Myth"].map((t) => (
+                <label key={t} className="row" style={{ gap: 4 }}>
+                  <input type="checkbox" checked={sim.raidTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, raidTracks: (e.target.checked ? [...sim.raidTracks, t] : sim.raidTracks.filter((x) => x !== t)) as any })} /> {t}
+                </label>
+              ))}
+            </div>
+            <span className="hint">Normal → Champion, Heroic → Hero, Mythic → Myth</span>
+          </div>
+          <div className="field">
+            <label>Треки M+</label>
+            <div className="row">
+              {["Champion", "Hero", "Myth"].map((t) => (
+                <label key={t} className="row" style={{ gap: 4 }}>
+                  <input type="checkbox" checked={sim.dungeonTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, dungeonTracks: (e.target.checked ? [...sim.dungeonTracks, t] : sim.dungeonTracks.filter((x) => x !== t)) as any })} /> {t}
+                </label>
+              ))}
+            </div>
+            <span className="hint">дроп из ключа — Hero, тайник — Myth</span>
+          </div>
+          <div className="field">
+            <label>Потоков (0 = все минус один)</label>
+            <input type="number" min={0} max={64} value={sim.threads} onChange={(e) => setSim({ ...sim, threads: Number(e.target.value) })} />
+          </div>
+          <div className="field">
+            <label>Сим устаревает через, дней</label>
+            <input type="number" min={1} max={60} value={sim.maxAgeDays} onChange={(e) => setSim({ ...sim, maxAgeDays: Number(e.target.value) })} />
+          </div>
+          <div className="field">
+            <label>Веса для танков (dps / входящий урон / самолечение)</label>
+            <div className="row">
+              <input type="number" step={0.1} style={{ width: 70 }} value={sim.tankWeights.dps} onChange={(e) => setSim({ ...sim, tankWeights: { ...sim.tankWeights, dps: Number(e.target.value) } })} />
+              <input type="number" step={0.1} style={{ width: 70 }} value={sim.tankWeights.dtps} onChange={(e) => setSim({ ...sim, tankWeights: { ...sim.tankWeights, dtps: Number(e.target.value) } })} />
+              <input type="number" step={0.1} style={{ width: 70 }} value={sim.tankWeights.hps} onChange={(e) => setSim({ ...sim, tankWeights: { ...sim.tankWeights, hps: Number(e.target.value) } })} />
+            </div>
+            <span className="hint">итог = dps·w1 − dtps·w2 + hps·w3 (в %). Хилов SimC не считает.</span>
+          </div>
+          <div className="field">
+            <label>Путь к simc.exe (пусто = скачанный автоматически)</label>
+            <input value={sim.simcPath} onChange={(e) => setSim({ ...sim, simcPath: e.target.value })} />
           </div>
         </div>
       </div>

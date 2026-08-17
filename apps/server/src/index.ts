@@ -6,11 +6,12 @@ import { createContext } from "./context.js";
 import { configRoutes } from "./routes/config.js";
 import { rosterRoutes } from "./routes/roster.js";
 import { lootRoutes } from "./routes/loot.js";
+import { simRoutes } from "./routes/sim.js";
 import { bisRoutes } from "./routes/bis.js";
 import { wowRoutes } from "./routes/wow.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
   await configRoutes(app, ctx);
   await rosterRoutes(app, ctx);
   await lootRoutes(app, ctx);
+  await simRoutes(app, ctx);
   await bisRoutes(app, ctx);
   await wowRoutes(app, ctx);
   ctx.sync.startScheduler();

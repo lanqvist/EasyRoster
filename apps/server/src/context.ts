@@ -5,6 +5,7 @@ import { StaticDataService } from "./services/static-data.js";
 import { ItemsService } from "./services/items.js";
 import { BisService } from "./services/bis/service.js";
 import { WowIntegrationService } from "./services/wow-integration.js";
+import { SimService } from "./services/sim/service.js";
 
 export interface Logger {
   info: (m: string) => void;
@@ -20,6 +21,7 @@ export interface AppContext {
   items: ItemsService;
   bis: BisService;
   wow: WowIntegrationService;
+  sim: SimService;
   log: Logger;
 }
 
@@ -31,6 +33,12 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   const items = new ItemsService(config, staticData, log);
   sync.afterCharacterSync = async () => {
     await items.ensureItems(sync.repo.allEquippedItemIds());
+    // автосим для тех, у кого сменилась экипировка / устарел сим
+    const simCfg = config.get().sim;
+    if (simCfg.enabled && simCfg.autoAfterSync) {
+      const n = sim.enqueue("all", true);
+      if (n) log.info(`автосим: в очереди ${n}`);
+    }
     // авто-экспорт db.lua после обновления экипировки
     if (config.get().sync.autoExportLua && config.get().wowRetailPath) {
       try {
@@ -68,5 +76,9 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   const bis = new BisService(db, config, staticData, sync.repo, log);
   const wow = new WowIntegrationService(config, db, sync.repo, bis, staticData, log);
   bis.historyProvider = () => wow.wonItemsByPlayer();
-  return { config, db, sync, staticData, items, bis, wow, log };
+  const sim = new SimService(db, config, staticData, sync.repo, bis.repo, log);
+  sim.afterSim = async () => {
+    if (config.get().sync.autoExportLua && config.get().wowRetailPath) wow.exportDbLua();
+  };
+  return { config, db, sync, staticData, items, bis, wow, sim, log };
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BIS_SLOT_ORDER, SLOT_NAMES_RU, type BisSourceStatus, type BisTeamRow } from "@easyroster/core";
 import { api } from "../lib/api";
+import { SimPanel } from "../components/SimPanel";
 import { classColor, relTime, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
 import { OBTAINED_STYLE, SOURCE_LABEL } from "../components/BisSlotList";
@@ -91,6 +92,7 @@ export function BisPage() {
                         </span>
                       )}
                       {s.source === "droptimizer" && <span className="muted" style={{ fontSize: 12 }}>ссылки Raidbots — в карточке персонажа</span>}
+                      {s.source === "simc" && <span className="muted" style={{ fontSize: 12 }}>автосим — панель ниже</span>}
                     </td>
                   </tr>
                 ))}
@@ -111,6 +113,8 @@ export function BisPage() {
           </div>
         </div>
       </div>
+
+      <SimPanel />
 
       {team.length === 0 ? (
         <div className="placeholder">Нет рейдеров с синхронизированной спекой. Обновите ростер и источники BiS.</div>

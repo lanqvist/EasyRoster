@@ -22,11 +22,11 @@ export class BisRepo {
     try {
       c.prepare("DELETE FROM bis_candidates WHERE source = ? AND spec_id = ? AND character_id IS ?").run(source, specId, characterId);
       const ins = c.prepare(`
-        INSERT INTO bis_candidates(source, spec_id, character_id, list, slot, rank, item_id, bonus_ids, original_item_id, item_name, source_note, score, fetched_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO bis_candidates(source, spec_id, character_id, list, slot, rank, item_id, bonus_ids, original_item_id, item_name, source_note, score, fetched_at, meta)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       for (const p of list) {
-        ins.run(source, specId, characterId, p.list, p.slot, p.rank, p.itemId, JSON.stringify(p.bonusIds), p.originalItemId, p.itemName, p.sourceNote, p.score, fetchedAt);
+        ins.run(source, specId, characterId, p.list, p.slot, p.rank, p.itemId, JSON.stringify(p.bonusIds), p.originalItemId, p.itemName, p.sourceNote, p.score, fetchedAt, p.meta ? JSON.stringify(p.meta) : null);
       }
       c.exec("COMMIT");
     } catch (e) {
@@ -126,5 +126,6 @@ function mapCandidate(r: any): BisCandidateRow {
     sourceNote: r.source_note,
     score: r.score,
     fetchedAt: r.fetched_at,
+    meta: r.meta ? JSON.parse(r.meta) : null,
   };
 }

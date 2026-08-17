@@ -1,4 +1,5 @@
 import {
+  isSimSource,
   SPECS,
   SPEC_BY_ID,
   rclcKeyForExport,
@@ -50,7 +51,7 @@ export class BisService {
 
   status(): { sources: BisSourceStatus[]; progress: BisProgress | null } {
     const stats = new Map(this.repo.sourceStats().map((s) => [s.source, s]));
-    const sources: BisSourceStatus[] = (["icyveins", "wcl", "droptimizer", "manual"] as BisSource[]).map((source) => ({
+    const sources: BisSourceStatus[] = (["icyveins", "wcl", "droptimizer", "simc", "manual"] as BisSource[]).map((source) => ({
       source,
       specs: stats.get(source)?.specs ?? 0,
       candidates: stats.get(source)?.candidates ?? 0,
@@ -314,7 +315,7 @@ export class BisService {
         for (const e of s.entries) {
           if (!targetIds.has(e.itemId) && !(e.originalItemId && targetIds.has(e.originalItemId))) continue;
           const eqIlvl = s.equipped.length ? Math.min(...s.equipped.map((x) => x.ilvl ?? 0)) : null;
-          const sim = e.sources.find((x) => x.source === "droptimizer");
+          const sim = e.sources.find((x) => isSimSource(x.source));
           out.push({
             characterId: c.id,
             name: c.name,
@@ -356,7 +357,7 @@ export class BisService {
         for (const s of view.slots) {
           for (const e of s.entries) {
             if (!targetIds.has(e.itemId) && !(e.originalItemId && targetIds.has(e.originalItemId))) continue;
-            const sim = e.sources.find((x) => x.source === "droptimizer");
+            const sim = e.sources.find((x) => isSimSource(x.source));
             list.push({
               characterId: c.id, name: c.name, realmName: c.realmName, classId: c.classId, specId: view.specId, slot: s.slot,
               rank: e.rank, score: e.score, obtained: e.obtained, obtainedDetail: e.obtainedDetail, upgradePct: sim?.score ?? null,

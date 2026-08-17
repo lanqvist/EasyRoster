@@ -1,6 +1,12 @@
 /** Типы движка BiS. */
 
-export type BisSource = "icyveins" | "wcl" | "droptimizer" | "manual";
+export type BisSource = "icyveins" | "wcl" | "droptimizer" | "simc" | "manual";
+
+/** Персональные сим-источники (привязаны к персонажу, дают % апгрейда). */
+export const SIM_SOURCES: readonly BisSource[] = ["droptimizer", "simc"];
+export function isSimSource(s: BisSource): boolean {
+  return s === "droptimizer" || s === "simc";
+}
 export type BisList = "overall" | "raid" | "mplus" | "tier" | "trinkets" | "sim" | "manual";
 
 /** Кандидат из источника (до объединения). */
@@ -14,6 +20,26 @@ export interface ParsedCandidate {
   itemName: string | null;
   sourceNote: string | null; // «Ula'tek», «Coiled Altar + Catalyst», «S tier» …
   score: number | null; // популярность % (wcl) или % апгрейда (sim)
+  /** доп. данные источника (simc: dpsBase, dpsMean, dpsDelta, dtpsPct, hpsPct, track, tokenId, slotUsed) */
+  meta?: SimCandidateMeta | Record<string, unknown> | null;
+}
+
+export interface SimCandidateMeta {
+  kind: "simc";
+  track: string;
+  trackBonusId: number;
+  slotUsed: string; // finger1/finger2/…
+  tokenId?: number;
+  encounterId?: number;
+  instanceId?: number;
+  base: number; // baseline dps
+  mean: number;
+  delta: number; // абсолютный прирост
+  dtpsPct?: number | null; // танк: изменение входящего урона, % (минус = лучше)
+  hpsPct?: number | null;
+  role: "dps" | "tank";
+  fightStyle: string;
+  error?: number; // % ошибка сима
 }
 
 export interface BisCandidateRow extends ParsedCandidate {
@@ -37,7 +63,7 @@ export interface BisEntry {
   bonusIds: number[];
   originalItemId: number | null;
   score: number; // итоговый балл объединения
-  sources: Array<{ source: BisSource; list: BisList; rank: number; score: number | null; note: string | null }>;
+  sources: Array<{ source: BisSource; list: BisList; rank: number; score: number | null; note: string | null; meta?: SimCandidateMeta | Record<string, unknown> | null }>;
   /** откуда падает (по справочнику) */
   drops: Array<{ instanceId: number; instanceName: string; encounterId: number; encounterName: string }>;
   obtained: ObtainedStatus;

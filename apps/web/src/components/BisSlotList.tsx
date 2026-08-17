@@ -8,7 +8,7 @@ export const OBTAINED_STYLE: Record<ObtainedStatus, { color: string; label: stri
   no: { color: "var(--bad)", label: "нет", bg: "rgba(224,96,96,.12)" },
 };
 
-export const SOURCE_LABEL: Record<string, string> = { icyveins: "Icy Veins", wcl: "WCL", droptimizer: "Сим", manual: "Ручное" };
+export const SOURCE_LABEL: Record<string, string> = { icyveins: "Icy Veins", wcl: "WCL", droptimizer: "Droptimizer", simc: "SimC", manual: "Ручное" };
 
 export function BisSlotList({
   view,

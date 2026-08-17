@@ -44,6 +44,7 @@ export interface CharacterRow {
   profileSyncedAt: number | null;
   summaryLastModified: string | null;
   rosterSyncedAt: number;
+  raceId: number | null;
 }
 
 export interface EquipmentRow {
@@ -182,6 +183,37 @@ export interface LootHistoryRow {
   owner: string | null;
   class: string | null;
   votes: number | null;
+}
+
+// ------------------------------------------------------------ фаза 6
+
+export interface SimCharacterState {
+  characterId: number;
+  name: string;
+  supported: boolean;
+  reason: string | null;
+  lastRunAt: number | null;
+  lastOk: boolean | null;
+  lastMessage: string | null;
+  profilesets: number | null;
+  baseline: number | null;
+  elapsedMs: number | null;
+  stale: boolean;
+  equipmentChanged: boolean;
+  queued: boolean;
+}
+
+export interface SimStatus {
+  enabled: boolean;
+  simcPath: string | null;
+  simcVersion: string | null;
+  installing: boolean;
+  installMessage: string | null;
+  running: boolean;
+  current: { characterId: number; name: string; stage: string; startedAt: number } | null;
+  queue: number;
+  cpuThreads: number;
+  characters: SimCharacterState[];
 }
 
 export interface ApiError {

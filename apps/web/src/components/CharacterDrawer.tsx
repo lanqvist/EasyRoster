@@ -137,6 +137,7 @@ export function CharacterDrawer({ id, onClose, initialTab = "gear" }: { id: numb
                       источники: {bis.sourcesUsed.map((s) => `${SOURCE_LABEL[s.source]} (${s.count})`).join(", ") || "нет — обновите на странице BiS"}
                       {bis.personalSim && <> · сим: {bis.personalSim.label}</>}
                     </div>
+                    <SimBox characterId={id} onDone={loadBis} />
                     <DroptimizerBox characterId={id} onImported={loadBis} />
                     <BisSlotList view={bis} locale={config?.locale ?? "ru_RU"} onPin={(e) => manual(e, "pin")} onExclude={(e) => manual(e, "exclude")} />
                     <ManualRules specId={bis.specId} characterId={id} onChange={loadBis} />
@@ -237,6 +238,44 @@ function ManualRules({ specId, characterId, onChange }: { specId: number; charac
           <button style={{ padding: "0 6px", fontSize: 11 }} onClick={async () => { await api.bisManualDelete(r.id); await load(); onChange(); }}>убрать</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function SimBox({ characterId, onDone }: { characterId: number; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [state, setState] = useState<{ stage: string } | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const st = await api.simStatus();
+      if (!st.simcPath) throw new Error("SimulationCraft не установлен — страница BiS → «Установить SimC»");
+      const r = await api.simRun({ ids: [characterId] });
+      if (r.queued === 0) throw new Error("Персонаж не поставлен в очередь (хил / нет спеки / уже в очереди)");
+      for (let i = 0; i < 240; i++) {
+        await new Promise((res) => setTimeout(res, 2000));
+        const s = await api.simStatus();
+        const me = s.characters.find((c) => c.characterId === characterId);
+        if (s.current?.characterId === characterId) setState({ stage: s.current.stage });
+        else if (me && !me.queued) {
+          setMsg(me.lastOk ? `Сим готов: ${me.profilesets} профильсетов за ${Math.round((me.elapsedMs ?? 0) / 1000)} с` : `Ошибка: ${me.lastMessage}`);
+          break;
+        } else setState({ stage: `в очереди (${s.queue})` });
+      }
+      onDone();
+    } catch (e) {
+      setMsg((e as Error).message);
+    } finally {
+      setBusy(false);
+      setState(null);
+    }
+  };
+  return (
+    <div className="row" style={{ marginBottom: 8, fontSize: 12 }}>
+      <button disabled={busy} onClick={run}>{busy ? (state?.stage ?? "Симлю…") : "Симить сейчас (SimC)"}</button>
+      {msg && <span className="muted">{msg}</span>}
     </div>
   );
 }

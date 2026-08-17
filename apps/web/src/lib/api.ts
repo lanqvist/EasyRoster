@@ -16,6 +16,7 @@ import type {
   PublicConfig,
   RealmOption,
   SyncStatus,
+  SimStatus,
 } from "@easyroster/core";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -78,6 +79,11 @@ export const api = {
     request<{ reportId: string; results: number; candidates: number; warning: string | null }>("/api/bis/droptimizer", { method: "POST", body: JSON.stringify({ characterId, url }) }),
   bisSim: (characterId: number) =>
     request<{ id: number; kind: string; url: string | null; simDate: number | null; importedAt: number; baselineDps: number | null; fightStyle: string | null } | null>(`/api/bis/sim/${characterId}`),
+  simStatus: () => request<SimStatus>("/api/sim/status"),
+  simInstall: () => request<{ started: true }>("/api/sim/install", { method: "POST" }),
+  simRun: (body: { ids?: number[]; all?: boolean; onlyStale?: boolean }) => request<{ queued: number }>("/api/sim/run", { method: "POST", body: JSON.stringify(body) }),
+  simClear: () => request<{ ok: true }>("/api/sim/clear", { method: "POST" }),
+  simCharacter: (id: number) => request<{ report: any; results: Array<any> }>(`/api/sim/character/${id}`),
   probeGuild: (body: { region: string; clientId: string; clientSecret?: string; realmSlug: string; guildName: string }) =>
     request<GuildProbeResult>("/api/blizzard/probe-guild", { method: "POST", body: JSON.stringify(body) }),
 };

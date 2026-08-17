@@ -88,6 +88,28 @@ export const AppConfigSchema = z.object({
     })
     .default({}),
 
+  /** Автосим SimulationCraft (фаза 6). */
+  sim: z
+    .object({
+      enabled: z.boolean().default(false),
+      /** запускать после синка персонажей для тех, у кого сменилась экипировка */
+      autoAfterSync: z.boolean().default(true),
+      fightStyle: z.enum(["Patchwerk", "HecticAddCleave", "DungeonSlice", "LightMovement", "HeavyMovement"]).default("Patchwerk"),
+      targetError: z.number().min(0.05).max(2).default(0.4),
+      threads: z.number().int().min(0).max(64).default(0), // 0 = все ядра
+      /** сложности рейда → треки: какие симить */
+      raidTracks: z.array(z.enum(["Champion", "Hero", "Myth"])).default(["Hero", "Myth"]),
+      /** M+ дроп (Hero) и/или тайник (Myth) */
+      dungeonTracks: z.array(z.enum(["Champion", "Hero", "Myth"])).default(["Hero"]),
+      /** веса метрик для танков: score = dps·w1 − dtps·w2 + hps·w3 */
+      tankWeights: z.object({ dps: z.number().default(0.4), dtps: z.number().default(0.5), hps: z.number().default(0.1) }).default({}),
+      /** максимальный возраст сима до пометки «устарел», дни */
+      maxAgeDays: z.number().int().min(1).max(60).default(7),
+      /** путь к simc.exe (пусто = скачанный автоматически) */
+      simcPath: z.string().default(""),
+    })
+    .default({}),
+
   sync: z
     .object({
       /** интервал автосинка персонажей, минуты; 0 = выключено */

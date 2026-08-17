@@ -91,6 +91,7 @@ export class SyncService {
         faction: m.character.faction?.type ?? null,
         rank: m.rank,
         isRaider: raiderRanks.has(m.rank),
+        raceId: m.character.playable_race?.id ?? null,
       }));
       const res = this.repo.upsertRoster(members, now);
       const raiders = members.filter((m) => m.isRaider).length;

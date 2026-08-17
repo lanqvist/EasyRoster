@@ -10,6 +10,7 @@ import {
   type ItemRow,
   type ObtainedStatus,
   type BisSource,
+  isSimSource,
 } from "@easyroster/core";
 import type { ManualRule } from "./repo.js";
 
@@ -52,6 +53,7 @@ export function candidateScore(c: BisCandidateRow): number {
     case "wcl":
       return Math.min(100, (c.score ?? 0) * 0.9); // популярность %
     case "droptimizer":
+    case "simc":
       return Math.min(100, Math.max(0, (c.score ?? 0) * 20)); // 5 % апгрейда = 100
     case "manual":
       return 100;
@@ -72,13 +74,16 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
   const pinned = new Map(manual.filter((m) => m.action === "pin").map((m) => [`${m.slot}|${m.itemId}`, m]));
 
   // персональный сим — свежий?
-  const simCands = candidates.filter((c) => c.source === "droptimizer" && c.characterId === input.characterId);
+  // предпочитаем свежайший персональный сим одного типа (simc или droptimizer)
+  const allSim = candidates.filter((c) => isSimSource(c.source) && c.characterId === input.characterId);
+  const newestSource = allSim.length ? allSim.reduce((a, b) => (b.fetchedAt > a.fetchedAt ? b : a)).source : null;
+  const simCands = allSim.filter((c) => c.source === newestSource);
   const simFresh = simCands.length > 0 && input.now - Math.max(...simCands.map((c) => c.fetchedAt)) <= input.simMaxAgeMs;
 
   // группировка по слоту и предмету
   const bySlot = new Map<string, Map<number, { cands: BisCandidateRow[]; bonusIds: number[]; originalItemId: number | null }>>();
   for (const c of candidates) {
-    if (c.source === "droptimizer" && (!simFresh || c.characterId !== input.characterId)) continue;
+    if (isSimSource(c.source) && (!simFresh || c.characterId !== input.characterId || c.source !== newestSource)) continue;
     if (c.characterId !== null && c.characterId !== input.characterId) continue;
     // WCL/IV не различают левое/правое кольцо — используем канонический слот
     const slot = c.slot;
@@ -121,7 +126,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
       }
       let score = 0;
       for (const [src, s] of bestBySource) {
-        const w = src === "icyveins" ? weights.icyveins : src === "wcl" ? weights.wcl : src === "droptimizer" ? weights.droptimizer : 1;
+        const w = src === "icyveins" ? weights.icyveins : src === "wcl" ? weights.wcl : isSimSource(src) ? weights.droptimizer : 1;
         score += s * w;
       }
       if (pinned.has(`${slot}|${itemId}`)) score += 1000;
@@ -144,7 +149,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
         bonusIds: e.bonusIds,
         originalItemId: e.originalItemId,
         score: Math.round(score * 10) / 10,
-        sources: e.cands.map((c) => ({ source: c.source, list: c.list, rank: c.rank, score: c.score, note: c.sourceNote })),
+        sources: e.cands.map((c) => ({ source: c.source, list: c.list, rank: c.rank, score: c.score, note: c.sourceNote, meta: c.meta ?? null })),
         drops: [...drops.values()],
         obtained,
         obtainedDetail: detail,
@@ -183,7 +188,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
 
   const sourcesUsed = new Map<BisSource, { fetchedAt: number | null; count: number }>();
   for (const c of candidates) {
-    if (c.source === "droptimizer" && !simFresh) continue;
+    if (isSimSource(c.source) && (!simFresh || c.source !== newestSource)) continue;
     const s = sourcesUsed.get(c.source) ?? { fetchedAt: null, count: 0 };
     s.count++;
     s.fetchedAt = Math.max(s.fetchedAt ?? 0, c.fetchedAt);
@@ -196,7 +201,7 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
     slots,
     coverage: { slots: coverSlots, obtained: coverObtained, lower: coverLower, pct: coverSlots ? Math.round((coverObtained / coverSlots) * 100) : 0 },
     sourcesUsed: [...sourcesUsed.entries()].map(([source, s]) => ({ source, ...s })),
-    personalSim: simFresh ? { fetchedAt: Math.max(...simCands.map((c) => c.fetchedAt)), label: simCands[0]?.sourceNote ?? "Droptimizer" } : null,
+    personalSim: simFresh ? { fetchedAt: Math.max(...simCands.map((c) => c.fetchedAt)), label: newestSource === "simc" ? "SimC (авто)" : (simCands[0]?.sourceNote ?? "Droptimizer") } : null,
   };
 }
 

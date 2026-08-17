@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { rclcKeyForExport, type AddonStatus, type LootHistoryRow, type ItemWanter } from "@easyroster/core";
+import {
+  isSimSource, rclcKeyForExport, type AddonStatus, type LootHistoryRow, type ItemWanter } from "@easyroster/core";
 import { REPO_ROOT } from "../paths.js";
 import type { ConfigService } from "./config.js";
 import type { Db } from "./db.js";
@@ -135,7 +136,8 @@ export class WowIntegrationService {
       const map: Record<number, ExportEntry> = {};
       for (const s of view.slots) {
         for (const e of s.entries) {
-          const sim = e.sources.find((x) => x.source === "droptimizer");
+          const sims = e.sources.filter((x) => isSimSource(x.source) && x.score != null);
+          const sim = sims.length ? sims.reduce((a, b) => ((b.score ?? -1e9) > (a.score ?? -1e9) ? b : a)) : undefined;
           const entry: ExportEntry = {
             r: e.rank,
             s: e.obtained === "yes" ? "y" : e.obtained === "lower" ? "l" : e.obtained === "catalyst" ? "c" : "n",
@@ -144,6 +146,20 @@ export class WowIntegrationService {
             sp: view.specId,
           };
           if (sim?.score != null) entry.p = Math.round(sim.score * 10) / 10;
+          if (sim?.meta && (sim.meta as any).kind === "simc") {
+            const m = sim.meta as any;
+            if (typeof m.delta === "number") entry.dd = Math.round(m.delta);
+            if (m.role === "tank") {
+              if (typeof m.dtpsPct === "number") entry.dt = Math.round(m.dtpsPct * 10) / 10;
+              if (typeof m.hpsPct === "number") entry.hp = Math.round(m.hpsPct * 10) / 10;
+            }
+            const pt: Record<string, number> = {};
+            for (const x of sims) {
+              const mm = x.meta as any;
+              if (mm?.kind === "simc" && mm.track && x.score != null) pt[mm.track] = Math.round(x.score * 10) / 10;
+            }
+            if (Object.keys(pt).length > 1) entry.pt = pt;
+          }
           if (e.obtainedDetail) entry.d = e.obtainedDetail;
           if (e.isTier) entry.t = 1;
           const put = (id: number, extra: Partial<ExportEntry> = {}) => {
@@ -174,6 +190,15 @@ export class WowIntegrationService {
     lines.push(`EasyRosterSeason = ${luaString(cfg.season.label || "")}`);
     lines.push(`EasyRosterGuild = ${luaString(cfg.guild.name || "")}`);
     lines.push("-- Формат: [\"Имя-Реалм\"] = { [itemID] = { r=ранг в слоте, s=y|l|c|n (есть/ниже трек/катализатор/нет), sl=слот, sc=балл, sp=спека, p=% апгрейда, d=детали, t=1 тир, c=1 источник для катализатора, k=1 тир-токен } }");
+    // bonusID → название трека (для определения сложности выпавшего предмета в игре)
+    const tracks: Record<number, string> = {};
+    for (const b of this.staticData.getBonuses().values()) {
+      const u = b.upgrade;
+      if (!u) continue;
+      if (cfg.season.seasonId != null ? u.seasonId !== cfg.season.seasonId : u.seasonId == null) continue;
+      tracks[b.id] = u.name;
+    }
+    lines.push("EasyRosterTracks = " + toLua(tracks));
     lines.push("EasyRosterData = " + toLua(data));
     return { lua: lines.join("\n") + "\n", characters };
   }
@@ -326,7 +351,11 @@ export interface ExportEntry {
   sl: string;
   sc: number;
   sp: number;
-  p?: number; // % апгрейда
+  p?: number; // % апгрейда (лучший трек)
+  pt?: Record<string, number>; // % по трекам: {Hero=1.7, Myth=2.7}
+  dd?: number; // абсолютный прирост dps (simc)
+  dt?: number; // танк: изменение входящего урона %
+  hp?: number; // танк: изменение самолечения %
   d?: string; // детали
   t?: 1; // тир
   c?: 1; // рейдовый источник для катализатора

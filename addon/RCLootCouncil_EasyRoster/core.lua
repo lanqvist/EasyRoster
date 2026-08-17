@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.2.0"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.3.0"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -107,8 +107,30 @@ local STATUS_TEXT = {
 }
 ER.STATUS_TEXT = STATUS_TEXT
 
+--- Название трека выпавшего предмета по bonusID в ссылке (EasyRosterTracks из db.lua)
+function ER:TrackOfLink(link)
+	if not link or type(EasyRosterTracks) ~= "table" then return nil end
+	local s = link:match("|Hitem:([%-%d:]+)|h")
+	if not s then return nil end
+	local f = {}
+	for v in (s .. ":"):gmatch("([^:]*):") do f[#f + 1] = v end
+	local n = tonumber(f[13]) or 0
+	for i = 1, n do
+		local id = tonumber(f[13 + i])
+		if id and EasyRosterTracks[id] then return EasyRosterTracks[id] end
+	end
+	return nil
+end
+
+--- % апгрейда для конкретного трека (если есть разбивка), иначе общий
+function ER:PctForTrack(entry, track)
+	if not entry then return nil end
+	if track and type(entry.pt) == "table" and entry.pt[track] then return entry.pt[track], track end
+	return entry.p, nil
+end
+
 --- Короткий текст для ячейки: "BiS #1 · нужно (+3.2%)"
-function ER:FormatEntry(entry)
+function ER:FormatEntry(entry, track)
 	if not entry then return nil end
 	local st = STATUS_TEXT[entry.s] or STATUS_TEXT.n
 	local rank = entry.r or 9
@@ -126,18 +148,22 @@ function ER:FormatEntry(entry)
 	if not self:GetOpt("showRankOnly") then
 		text = text .. " " .. st.color .. st.text .. "|r"
 	end
-	if entry.p and entry.p ~= 0 then
-		text = text .. string.format(" |cff7cc4ff+%.1f%%|r", entry.p)
+	local pct = self:PctForTrack(entry, track)
+	if pct and pct ~= 0 then
+		local color = pct > 0 and "|cff7cc4ff" or "|cff9a9dab"
+		text = text .. string.format(" %s%+.1f%%|r", color, pct)
+		if entry.dt then text = text .. string.format(" |cff9a9dab(урон %+.1f%%)|r", entry.dt) end
 	end
 	return text
 end
 
 --- Числовое значение для сортировки: чем больше — тем «нужнее»
-function ER:SortValue(entry)
+function ER:SortValue(entry, track)
 	if not entry then return -1 end
 	local v = 100 - (entry.r or 9) * 10
 	if entry.s == "n" then v = v + 40 elseif entry.s == "c" then v = v + 25 elseif entry.s == "l" then v = v + 10 end
-	if entry.p then v = v + entry.p * 5 end
+	local pct = self:PctForTrack(entry, track)
+	if pct then v = v + pct * 5 end
 	return v
 end
 
@@ -151,7 +177,21 @@ function ER:TooltipLines(entry, name)
 	local st = STATUS_TEXT[entry.s] or STATUS_TEXT.n
 	tinsert(lines, string.format("Слот: %s · место в листе: #%d · балл %s", tostring(entry.sl or "?"), entry.r or 0, tostring(entry.sc or "?")))
 	tinsert(lines, "Статус: " .. st.color .. st.text .. "|r" .. (entry.d and (" — " .. entry.d) or ""))
-	if entry.p then tinsert(lines, string.format("Droptimizer: +%.1f%%", entry.p)) end
+	if entry.p then
+		if type(entry.pt) == "table" then
+			local parts = {}
+			for _, tr in ipairs({ "Champion", "Hero", "Myth" }) do
+				if entry.pt[tr] then tinsert(parts, string.format("%s %+.1f%%", tr, entry.pt[tr])) end
+			end
+			tinsert(lines, "Сим: " .. table.concat(parts, " · "))
+		else
+			tinsert(lines, string.format("Сим: %+.1f%%", entry.p))
+		end
+		if entry.dd then tinsert(lines, string.format("Прирост DPS (лучший трек): %+d", entry.dd)) end
+		if entry.dt or entry.hp then
+			tinsert(lines, string.format("Танк: входящий урон %+.1f%%%s", entry.dt or 0, entry.hp and string.format(", самолечение %+.1f%%", entry.hp) or ""))
+		end
+	end
 	if entry.t == 1 then tinsert(lines, "Тир-предмет") end
 	if entry.k == 1 then tinsert(lines, "Тир-токен: содержит BiS-предмет для этого персонажа") end
 	if entry.c == 1 then tinsert(lines, "Рейдовый предмет — источник для Катализатора") end

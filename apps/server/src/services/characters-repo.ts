@@ -11,6 +11,7 @@ export interface RosterUpsert {
   faction: string | null;
   rank: number;
   isRaider: boolean;
+  raceId?: number | null;
 }
 
 export class CharactersRepo {
@@ -20,13 +21,14 @@ export class CharactersRepo {
   upsertRoster(members: RosterUpsert[], now: number): { added: number; updated: number; left: number } {
     const c = this.db.conn;
     const upsert = c.prepare(`
-      INSERT INTO characters (id, name, realm_slug, realm_name, class_id, level, faction, rank, in_guild, is_raider, roster_synced_at)
-      VALUES (@id, @name, @realmSlug, @realmName, @classId, @level, @faction, @rank, 1, @isRaider, @now)
+      INSERT INTO characters (id, name, realm_slug, realm_name, class_id, level, faction, rank, in_guild, is_raider, roster_synced_at, race_id)
+      VALUES (@id, @name, @realmSlug, @realmName, @classId, @level, @faction, @rank, 1, @isRaider, @now, @raceId)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name, realm_slug = excluded.realm_slug,
         realm_name = CASE WHEN excluded.realm_name <> '' THEN excluded.realm_name ELSE characters.realm_name END,
         class_id = excluded.class_id, level = excluded.level, faction = COALESCE(excluded.faction, characters.faction),
-        rank = excluded.rank, in_guild = 1, is_raider = excluded.is_raider, roster_synced_at = excluded.roster_synced_at
+        rank = excluded.rank, in_guild = 1, is_raider = excluded.is_raider, roster_synced_at = excluded.roster_synced_at,
+        race_id = COALESCE(excluded.race_id, characters.race_id)
     `);
     const exists = c.prepare("SELECT 1 FROM characters WHERE id = ?");
     let added = 0;
@@ -37,7 +39,7 @@ export class CharactersRepo {
         const was = exists.get(m.id);
         upsert.run({
           id: m.id, name: m.name, realmSlug: m.realmSlug, realmName: m.realmName, classId: m.classId,
-          level: m.level, faction: m.faction, rank: m.rank, isRaider: m.isRaider ? 1 : 0, now,
+          level: m.level, faction: m.faction, rank: m.rank, isRaider: m.isRaider ? 1 : 0, now, raceId: m.raceId ?? null,
         });
         if (was) updated++;
         else added++;
@@ -170,6 +172,7 @@ function mapCharacter(r: any): CharacterRow {
     profileSyncedAt: r.profile_synced_at,
     summaryLastModified: r.summary_last_modified,
     rosterSyncedAt: r.roster_synced_at,
+    raceId: r.race_id ?? null,
   };
 }
 
