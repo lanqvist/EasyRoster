@@ -389,6 +389,14 @@ export class StaticDataService {
     });
   }
 
+  getIconUrl(id: number): string | null {
+    const r = this.db.conn.prepare("SELECT icon_url FROM items WHERE id = ?").get(id) as any;
+    return r?.icon_url ?? null;
+  }
+  setIconUrl(id: number, url: string): void {
+    this.db.conn.prepare("UPDATE items SET icon_url = ? WHERE id = ?").run(url, id);
+  }
+
   missingItemIds(ids: number[]): number[] {
     const q = this.db.conn.prepare("SELECT 1 FROM items WHERE id = ?");
     return [...new Set(ids)].filter((id) => !q.get(id));

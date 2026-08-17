@@ -54,7 +54,7 @@ export function BisSlotList({
             <div className="muted" style={{ fontSize: 11 }}>
               {s.equipped.map((e) => (
                 <span key={e.itemId + (e.ilvl ?? 0)} style={{ marginLeft: 8 }} title={e.itemName ?? ""}>
-                  <img src={iconUrl(e.icon, "small")} width={14} height={14} alt="" style={{ verticalAlign: "-2px", marginRight: 3, borderRadius: 2 }} />
+                  <img src={iconUrl(e.icon, "small")} width={14} height={14} alt="" style={{ verticalAlign: "-2px", marginRight: 3, borderRadius: 2 }} onError={(ev) => { const im = ev.currentTarget; if (!im.dataset.fb) { im.dataset.fb = "1"; im.src = `/api/items/${e.itemId}/icon`; } }} />
                   {e.ilvl ?? "?"} {e.track ? `· ${e.track}` : ""}
                 </span>
               ))}

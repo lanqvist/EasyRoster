@@ -47,6 +47,14 @@ export async function lootRoutes(app: FastifyInstance, ctx: AppContext): Promise
     return view;
   });
 
+  /** Фолбэк иконки: редирект на Blizzard media, если на CDN Wowhead иконки нет. */
+  app.get("/api/items/:id/icon", async (req, reply) => {
+    const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);
+    const url = await ctx.items.iconUrlFor(id);
+    reply.header("Cache-Control", "public, max-age=86400");
+    return reply.redirect(url ?? "https://wow.zamimg.com/images/wow/icons/medium/inv_misc_questionmark.jpg", 302);
+  });
+
   app.get("/api/items/:id", async (req, reply) => {
     const { id } = z.object({ id: z.coerce.number().int() }).parse(req.params);
     const item = ctx.staticData.item(id);

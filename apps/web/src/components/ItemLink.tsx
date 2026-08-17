@@ -38,7 +38,22 @@ export function ItemLink({
       className="item-link"
       style={{ color: muted ? "var(--text-muted)" : QUALITY_COLORS_NUM[quality ?? 4], display: "inline-flex", alignItems: "center", gap: 6, ...style }}
     >
-      {icon !== undefined && <img src={iconUrl(icon, "small")} width={size} height={size} alt="" style={{ borderRadius: 3, flex: "none" }} loading="lazy" />}
+      {icon !== undefined && (
+        <img
+          src={iconUrl(icon, "small")}
+          width={size}
+          height={size}
+          alt=""
+          style={{ borderRadius: 3, flex: "none" }}
+          loading="lazy"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (img.dataset.fallback) return;
+            img.dataset.fallback = "1";
+            img.src = `/api/items/${itemId}/icon`;
+          }}
+        />
+      )}
       <span>{name}</span>
       {children}
     </a>

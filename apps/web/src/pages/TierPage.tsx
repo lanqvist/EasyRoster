@@ -127,7 +127,7 @@ export function TierPage() {
       <div className="row" style={{ marginBottom: 8 }}>
         {data?.tokens.map((t) => (
           <button key={t.tokenId} className={token === t.tokenId ? "primary" : undefined} onClick={() => setToken(t.tokenId)} title={t.instanceName}>
-            <img src={iconUrl(t.icon, "small")} width={16} height={16} alt="" style={{ verticalAlign: "middle", marginRight: 4, borderRadius: 2 }} />
+            <img src={iconUrl(t.icon, "small")} width={16} height={16} alt="" style={{ verticalAlign: "middle", marginRight: 4, borderRadius: 2 }} onError={(ev) => { const im = ev.currentTarget; if (!im.dataset.fb) { im.dataset.fb = "1"; im.src = `/api/items/${t.tokenId}/icon`; } }} />
             {t.name} <span className="muted" style={{ fontSize: 11 }}>· {t.encounterName}</span>
           </button>
         ))}

@@ -238,6 +238,10 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE characters ADD COLUMN roster_override TEXT;   -- 'exclude' | 'include' | NULL
   `,
+  // v11 — URL иконки из Blizzard media (фолбэк, когда на CDN Wowhead иконки ещё нет)
+  `
+  ALTER TABLE items ADD COLUMN icon_url TEXT;
+  `,
 ];
 
 export class Db {

@@ -127,6 +127,22 @@ export class ItemsService {
     return batch.length;
   }
 
+  /** URL иконки из Blizzard media API (кэш в items.icon_url). */
+  async iconUrlFor(id: number): Promise<string | null> {
+    const cached = this.staticData.getIconUrl(id);
+    if (cached) return cached;
+    const client = this.client();
+    if (!client) return null;
+    try {
+      const r = await client.get<{ assets?: Array<{ key: string; value: string }> }>(`/data/wow/media/item/${id}`, "static");
+      const url = r.data?.assets?.find((a) => a.key === "icon")?.value ?? null;
+      if (url) this.staticData.setIconUrl(id, url);
+      return url;
+    } catch {
+      return null;
+    }
+  }
+
   /** Гарантировать наличие предметов в справочнике (для экипировки персонажей). */
   async ensureItems(ids: number[]): Promise<number> {
     const missing = this.staticData.missingItemIds(ids);
