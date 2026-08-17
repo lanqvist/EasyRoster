@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.6.3"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.6.4"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -329,7 +329,7 @@ function ER:TooltipLines(entry, name, track)
 		tinsert(lines, string.format("Лучшая альтернатива: %s (%s) %+.1f%%", self:ItemName(entry.ai) or "?", SRC[entry.as or "o"] or "?", entry.ap or 0))
 	end
 	if entry.ag then
-		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" - альтернатив ≥95%%: " .. entry.an) or ""))
+		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" - альтернатив не хуже 95%: " .. entry.an) or ""))
 	end
 	if entry.t == 1 then
 		local tl = "Тир-предмет"
