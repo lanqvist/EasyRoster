@@ -2,7 +2,7 @@
 ## Title: RCLootCouncil - EasyRoster
 ## Notes: Колонка BiS в окне голосования RCLootCouncil, подсказки в окне ролла и экспорт ростера гильдии для EasyRoster
 ## Author: EasyRoster
-## Version: 0.4.6
+## Version: 0.5.0
 ## Dependencies: RCLootCouncil
 ## SavedVariables: EasyRosterDB
 ## X-Category: Loot

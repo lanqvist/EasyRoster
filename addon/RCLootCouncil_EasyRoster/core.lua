@@ -3,7 +3,7 @@ local addon = LibStub("AceAddon-3.0"):GetAddon("RCLootCouncil")
 local ER = addon:NewModule("RCEasyRoster", "AceEvent-3.0", "AceTimer-3.0", "AceHook-3.0", "AceConsole-3.0")
 _G.RCEasyRoster = ER
 
-ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.4.6"
+ER.version = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("RCLootCouncil_EasyRoster", "Version") or "0.5.0"
 ER.COLOR = "|cffd9a441"
 ER.PREFIXES = { MAIN = "RCer" }
 
@@ -15,6 +15,7 @@ ER.sharedTimestamp = 0
 ER.defaults = {
 	easyroster = {
 		showColumn = true,
+		showAltColumns = true, -- колонки «Альт M+» и «Альт рейд» рядом с BiS
 		showLootFrame = true,
 		showRankOnly = false, -- показывать только ранг (#1/#2), без статуса
 		exportGuild = true,
@@ -154,13 +155,135 @@ function ER:FormatEntry(entry, track)
 		local color = pct > 0 and "|cff7cc4ff" or "|cff9a9dab"
 		text = text .. string.format(" %s%+.1f%%|r", color, pct)
 		if entry.dt then text = text .. string.format(" |cff9a9dab(урон %+.1f%%)|r", entry.dt) end
-		-- незаменимость: насколько лучше фармабельной альтернативы
-		if entry.ag then
+		-- незаменимость: насколько лучше фармабельной альтернативы (в ячейке — только если нет отдельных колонок)
+		if entry.ag and not self:GetOpt("showAltColumns") then
 			local gcol = entry.ag >= 2 and "|cff4fbf7a" or (entry.ag >= 0.8 and "|cffe0b64a" or "|cff9a9dab")
 			text = text .. string.format(" %s▲%.1f|r", gcol, entry.ag)
 		end
 	end
 	return text
+end
+
+-- ---------------------------------------------------------------- альтернативы по типам контента
+
+ER.ALT_KINDS = {
+	{ key = "am", short = "M+", label = "M+ (ключ)" },
+	{ key = "ar", short = "рейд", label = "другой босс рейда" },
+	{ key = "av", short = "тайник", label = "Великий тайник (M+ на Миф)" },
+	{ key = "ak", short = "крафт", label = "крафт" },
+}
+
+local pendingItemLoads = {}
+local refreshTimer
+--- Имя предмета по ID; если ещё не в кэше клиента — запрашиваем и перерисовываем окно голосования, когда придёт
+function ER:ItemName(itemID)
+	if not itemID then return nil end
+	local name = C_Item.GetItemInfo(itemID)
+	if name then return name end
+	if not pendingItemLoads[itemID] and Item and Item.CreateFromItemID then
+		pendingItemLoads[itemID] = true
+		local item = Item:CreateFromItemID(itemID)
+		item:ContinueOnItemLoad(function()
+			pendingItemLoads[itemID] = nil
+			if refreshTimer then return end
+			refreshTimer = ER:ScheduleTimer(function()
+				refreshTimer = nil
+				local vf = addon:GetActiveModule("votingframe")
+				if vf and vf.Update then vf:Update(true) end
+			end, 0.3)
+		end)
+	end
+	return "#" .. itemID
+end
+
+--- Альтернатива данного типа: таблица { i=itemID, p=%, n=источник, pt={трек=%} } или nil.
+--- Для рейда (ar) — % берётся для трека выпавшего предмета, если есть разбивка.
+function ER:AltFor(entry, key, track)
+	if not entry then return nil end
+	local a = entry[key]
+	if type(a) ~= "table" or not a.i then return nil end
+	local pct = a.p
+	if track and type(a.pt) == "table" and a.pt[track] then pct = a.pt[track] end
+	return a, pct
+end
+
+--- Насколько выпавший предмет лучше альтернативы (own − alt); nil если чего-то нет
+function ER:AltDiff(entry, key, track)
+	local own = self:PctForTrack(entry, track)
+	local a, pct = self:AltFor(entry, key, track)
+	if not a or own == nil or pct == nil then return nil end
+	return own - pct
+end
+
+--- Цвет вердикта по разнице: зелёный — выпавшее заметно лучше альтернативы (отдать сюда выгоднее),
+--- жёлтый — примерно равно, серый — альтернатива не хуже (слот закрывается иначе)
+local function diffColor(diff)
+	if diff == nil then return "|cff9a9dab" end
+	if diff >= 1 then return "|cff4fbf7a" end
+	if diff >= 0.3 then return "|cffe0b64a" end
+	return "|cff9a9dab"
+end
+ER.DiffColor = diffColor
+
+--- Короткий текст ячейки колонки альтернативы: "+2.5% ▲0.4" (▲ = насколько выпавшее лучше)
+function ER:FormatAlt(entry, key, track)
+	if not entry then return nil end
+	local a, pct = self:AltFor(entry, key, track)
+	if not a then return "|cff5a5d6a—|r" end
+	local own = self:PctForTrack(entry, track)
+	if own == nil or pct == nil then
+		-- нет сима (хилы): показываем только факт наличия альтернативы
+		return "|cff9a9dabесть|r"
+	end
+	local diff = own - pct
+	local col = diffColor(diff)
+	local text = string.format("%s%+.1f%%|r", pct > 0 and "|cff7cc4ff" or "|cff9a9dab", pct)
+	if diff >= 0.05 then
+		text = text .. string.format(" %s▲%.1f|r", col, diff)
+	elseif diff <= -0.05 then
+		text = text .. string.format(" %s▼%.1f|r", col, -diff)
+	else
+		text = text .. " |cff9a9dab≈|r"
+	end
+	return text
+end
+
+--- Сортировка по колонке альтернативы: сначала те, кому выпавшее даёт больше всего сверх альтернативы
+function ER:AltSortValue(entry, key, track)
+	if not entry then return -1000 end
+	local a, pct = self:AltFor(entry, key, track)
+	local own = self:PctForTrack(entry, track)
+	if own == nil then return -500 + (100 - (entry.r or 9) * 10) end
+	if not a or pct == nil then return own + 100 end -- альтернативы нет вовсе — предмет незаменим
+	return own - pct
+end
+
+--- Строки тултипа по альтернативам
+function ER:AltTooltipLines(entry, track)
+	local lines = {}
+	if not entry then return lines end
+	local own = self:PctForTrack(entry, track)
+	local any = false
+	for _, k in ipairs(self.ALT_KINDS) do
+		local a, pct = self:AltFor(entry, k.key, track)
+		if a then
+			any = true
+			local name = self:ItemName(a.i)
+			local src = a.n and (" — " .. a.n) or ""
+			local val
+			if own ~= nil and pct ~= nil then
+				local diff = own - pct
+				val = string.format("%+.1f%%  %s(выпавшее %s%.1f)|r", pct, diffColor(diff), diff >= 0 and "лучше на " or "хуже на ", math.abs(diff))
+			elseif pct ~= nil then
+				val = string.format("балл %d", pct)
+			else
+				val = ""
+			end
+			tinsert(lines, string.format("  %s%s|r: %s%s  %s", "|cffd9a441", k.label, name, src, val))
+		end
+	end
+	if any then tinsert(lines, 1, "Альтернативы в этот слот:") end
+	return lines
 end
 
 --- Числовое значение для сортировки: чем больше — тем «нужнее»
@@ -173,8 +296,8 @@ function ER:SortValue(entry, track)
 	return v
 end
 
---- Тултип по записи
-function ER:TooltipLines(entry, name)
+--- Тултип по записи (track — трек выпавшего предмета, если известен)
+function ER:TooltipLines(entry, name, track)
 	local lines = {}
 	if not entry then
 		tinsert(lines, "|cff9a9dabНет в BiS-листе|r")
@@ -198,10 +321,12 @@ function ER:TooltipLines(entry, name)
 			tinsert(lines, string.format("Танк: входящий урон %+.1f%%%s", entry.dt or 0, entry.hp and string.format(", самолечение %+.1f%%", entry.hp) or ""))
 		end
 	end
-	local SRC = { r = "рейд", m = "M+", v = "тайник", c = "катализатор", k = "крафт", w = "мировой босс", o = "другое" }
-	if entry.ap or entry.ai then
-		local altName = entry.ai and (C_Item.GetItemInfo(entry.ai) or ("#" .. entry.ai)) or "?"
-		tinsert(lines, string.format("Лучшая альтернатива: %s (%s) %+.1f%%", altName, SRC[entry.as or "o"] or "?", entry.ap or 0))
+	local altLines = self:AltTooltipLines(entry, track)
+	if #altLines > 0 then
+		for _, l in ipairs(altLines) do tinsert(lines, l) end
+	elseif entry.ap or entry.ai then
+		local SRC = { r = "рейд", m = "M+", v = "тайник", c = "катализатор", k = "крафт", w = "мировой босс", o = "другое" }
+		tinsert(lines, string.format("Лучшая альтернатива: %s (%s) %+.1f%%", self:ItemName(entry.ai) or "?", SRC[entry.as or "o"] or "?", entry.ap or 0))
 	end
 	if entry.ag then
 		tinsert(lines, string.format("Незаменимость (над фармабельной альтернативой): %+.1f%%%s", entry.ag, entry.an and (" · альтернатив ≥95%%: " .. entry.an) or ""))
@@ -242,6 +367,11 @@ local optionsTable = {
 			type = "toggle", order = 1, name = "Колонка BiS в окне голосования", width = "full",
 			get = function() return ER:GetOpt("showColumn") end,
 			set = function(_, v) ER:SetOpt("showColumn", v); ER:Print("изменение колонки применится после /reload") end,
+		},
+		showAltColumns = {
+			type = "toggle", order = 1.5, name = "Колонки «Альт M+» и «Альт рейд» (лучшая альтернатива из ключей / с другого босса и насколько выпавшее лучше)", width = "full",
+			get = function() return ER:GetOpt("showAltColumns") end,
+			set = function(_, v) ER:SetOpt("showAltColumns", v); ER:Print("изменение колонок применится после /reload") end,
 		},
 		showLootFrame = {
 			type = "toggle", order = 2, name = "Подсказка в окне ролла", width = "full",

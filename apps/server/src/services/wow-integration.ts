@@ -179,6 +179,20 @@ export class WowIntegrationService {
             }
             if (a.gap != null) entry.ag = Math.round(a.gap * 10) / 10;
             if (a.count) entry.an = a.count;
+            // разбивка по типам контента: M+ / другой босс рейда / тайник / крафт
+            const r1 = (x: number) => Math.round(x * 10) / 10;
+            const bk = a.byKind;
+            if (bk?.mplus) entry.am = { i: bk.mplus.itemId, p: r1(bk.mplus.pct), n: bk.mplus.sourceName || undefined };
+            if (bk?.raid) {
+              entry.ar = { i: bk.raid.itemId, p: r1(bk.raid.pct), n: bk.raid.sourceName || undefined };
+              const ptt = bk.raid.pctByTrack;
+              if (ptt && Object.keys(ptt).length > 1) {
+                entry.ar.pt = {};
+                for (const [t, v] of Object.entries(ptt)) entry.ar.pt[t] = r1(v);
+              }
+            }
+            if (bk?.vault) entry.av = { i: bk.vault.itemId, p: r1(bk.vault.pct), n: bk.vault.sourceName || undefined };
+            if (bk?.craft) entry.ak = { i: bk.craft.itemId, p: r1(bk.craft.pct) };
           }
           const SK: Record<string, string> = { raid: "r", mplus: "m", vault: "v", catalyst: "c", craft: "k", world: "w", other: "o" };
           entry.sk = SK[e.sourceKind] ?? "o";
@@ -219,7 +233,9 @@ export class WowIntegrationService {
     lines.push(`EasyRosterTimestamp = ${ts}`);
     lines.push(`EasyRosterSeason = ${luaString(cfg.season.label || "")}`);
     lines.push(`EasyRosterGuild = ${luaString(cfg.guild.name || "")}`);
-    lines.push("-- Формат: [\"Имя-Реалм\"] = { [itemID] = { r=ранг в слоте, s=y|l|c|n (есть/ниже трек/катализатор/нет), sl=слот, sc=балл, sp=спека, p=% апгрейда, d=детали, t=1 тир, c=1 источник для катализатора, k=1 тир-токен } }");
+    lines.push("-- Формат: [\"Имя-Реалм\"] = { [itemID] = { r=ранг в слоте, s=y|l|c|n (есть/ниже трек/катализатор/нет), sl=слот, sc=балл, sp=спека, sk=тип источника,");
+    lines.push("--   p=% апгрейда (лучший трек), pt={трек=%}, dd=Δdps, dt/hp=танк, d=детали, t=1 тир (tp/t4/t2/tc), c=1 источник для катализатора, k=1 тир-токен,");
+    lines.push("--   ap/ai/as/ag/an=лучшая фармабельная альтернатива/gap, am/ar/av/ak={i=itemID,p=%,n=источник,pt={трек=%}} — лучшая альтернатива из M+ / другого босса / тайника / крафта } }");
     // bonusID → название трека (для определения сложности выпавшего предмета в игре)
     const tracks: Record<number, string> = {};
     for (const b of this.staticData.getBonuses().values()) {
@@ -228,8 +244,9 @@ export class WowIntegrationService {
       if (cfg.season.seasonId != null ? u.seasonId !== cfg.season.seasonId : u.seasonId == null) continue;
       tracks[b.id] = u.name;
     }
-    lines.push("EasyRosterTracks = " + toLua(tracks));
-    lines.push("EasyRosterData = " + toLua(data));
+    lines.push("EasyRosterTracks = " + toLua(tracks, 0, 0));
+    // запись предмета — в одну строку (компактно: файл в 3 раза меньше, читается быстрее)
+    lines.push("EasyRosterData = " + toLua(data, 0, 2));
     return { lua: lines.join("\n") + "\n", characters };
   }
 
@@ -375,6 +392,13 @@ export class WowIntegrationService {
   }
 }
 
+export interface ExportAlt {
+  i: number; // itemID
+  p: number; // % (или балл, если сима нет)
+  n?: string; // источник: подземелье / босс
+  pt?: Record<string, number>; // % по трекам (рейд)
+}
+
 export interface ExportEntry {
   r: number; // ранг в слоте
   s: "y" | "l" | "c" | "n";
@@ -391,6 +415,14 @@ export interface ExportEntry {
   as?: string; // тип источника альтернативы: r/m/v/c/k/w/o
   ag?: number; // gap: pct − фармабельная альтернатива
   an?: number; // число альтернатив ≥95 %
+  /** лучшая альтернатива из M+ (трек ключа): i=itemID, p=%, n=подземелье */
+  am?: ExportAlt;
+  /** лучшая альтернатива с другого босса рейда: n=босс, pt=% по трекам */
+  ar?: ExportAlt;
+  /** лучшая альтернатива из Великого тайника (M+ предмет на треке Миф) */
+  av?: ExportAlt;
+  /** крафт */
+  ak?: ExportAlt;
   sk?: string; // тип источника самого предмета
   tp?: number; // частей тира надето
   t4?: number; // ценность 4pc, %

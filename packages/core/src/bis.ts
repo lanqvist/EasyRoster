@@ -61,12 +61,29 @@ export const RAID_DIFFICULTY_LABEL: Record<RaidDifficulty, string> = { normal: "
 export interface AltRef {
   itemId: number;
   name: string;
+  /** ценность альтернативы: % сима (если есть сим) или балл объединения */
   pct: number;
   kind: SourceKind;
   sourceName: string;
   icon?: string | null;
   quality?: number | null;
   bonusIds?: number[];
+  /** трек, на котором посчитан pct (для сима) */
+  track?: string | null;
+  /** % сима по трекам (для рейдовых альтернатив — чтобы аддон мог взять трек выпавшего предмета) */
+  pctByTrack?: Record<string, number> | null;
+}
+
+/** Лучшая альтернатива по каждому типу контента сезона (все — из другого источника, чем сам предмет). */
+export interface AltByKind {
+  /** лучший предмет слота из M+ (трек ключа) */
+  mplus: AltRef | null;
+  /** лучший предмет слота с другого босса рейда (трек выбранной сложности) */
+  raid: AltRef | null;
+  /** лучший предмет слота из Великого тайника: M+ предмет на треке Миф */
+  vault: AltRef | null;
+  /** крафт */
+  craft: AltRef | null;
 }
 
 export interface BisAlternatives {
@@ -78,6 +95,8 @@ export interface BisAlternatives {
   gap: number | null;
   /** сколько альтернатив ≥ 95 % ценности предмета */
   count: number;
+  /** разбивка по типам контента */
+  byKind: AltByKind;
 }
 
 export interface BisEntry {

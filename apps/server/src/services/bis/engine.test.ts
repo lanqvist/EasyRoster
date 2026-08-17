@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { BisCandidateRow, BonusEntry, EquipmentRow, ItemRow } from "@easyroster/core";
-import { buildCharacterBis, candidateScore } from "./engine.js";
+import type { BisCandidateRow, BisEntry, BonusEntry, EquipmentRow, ItemRow } from "@easyroster/core";
+import { buildCharacterBis, candidateScore, computeAlternatives } from "./engine.js";
 import { aggregateGear } from "./wcl.js";
 
 const bonuses = new Map<number, BonusEntry>([
@@ -138,4 +138,36 @@ test("aggregateGear (WCL): популярность по слотам, парн�
   assert.equal(trinkets[0]!.score, 50);
   const mh = c.find((x) => x.slot === "MAIN_HAND")!;
   assert.deepEqual(mh.bonusIds, [12854]);
+});
+
+test("computeAlternatives: разбивка по типам контента (M+ / другой босс / тайник), исключение того же босса", () => {
+  const mk = (p: Partial<BisEntry> & { itemId: number; sourceKind: BisEntry["sourceKind"]; simByTrack: Record<string, number>; drops: BisEntry["drops"] }): BisEntry => ({
+    slot: "HEAD", rank: 0, itemName: `I${p.itemId}`, itemNameRu: null, icon: null, quality: 4, bonusIds: [], originalItemId: null, score: 50,
+    sources: [], bisTrack: null, dropTrack: null, equippedBest: null, alternatives: null, obtained: "no", obtainedDetail: null, isTier: false,
+    simSelected: { track: p.sourceKind === "mplus" ? "Hero" : "Champion", pct: p.simByTrack[p.sourceKind === "mplus" ? "Hero" : "Champion"]! },
+    ...p,
+  });
+  const raidDrop = (enc: number, name: string): BisEntry["drops"] => [{ instanceId: 1320, instanceName: "Raid", encounterId: enc, encounterName: name, kind: "raid" }];
+  const mDrop = (inst: number, name: string): BisEntry["drops"] => [{ instanceId: inst, instanceName: name, encounterId: 9, encounterName: "boss", kind: "mplus" }];
+  const entries: BisEntry[] = [
+    mk({ itemId: 1, sourceKind: "raid", drops: raidDrop(1, "Ula'tek"), simByTrack: { Champion: 3, Hero: 4, Myth: 5 } }),
+    mk({ itemId: 2, sourceKind: "raid", drops: raidDrop(1, "Ula'tek"), simByTrack: { Champion: 2.5, Hero: 3, Myth: 4 } }), // тот же босс — не альтернатива для #1
+    mk({ itemId: 3, sourceKind: "raid", drops: raidDrop(2, "Sszorak"), simByTrack: { Champion: 2, Hero: 2.8, Myth: 3.5 } }),
+    mk({ itemId: 4, sourceKind: "mplus", drops: mDrop(1322, "Altar"), simByTrack: { Champion: 1, Hero: 2.2, Myth: 3.9 } }),
+    mk({ itemId: 5, sourceKind: "mplus", drops: mDrop(1041, "Kings"), simByTrack: { Champion: 0.5, Hero: 1.9, Myth: 4.2 } }),
+  ];
+  computeAlternatives(entries);
+  const a = entries[0]!.alternatives!;
+  assert.equal(a.byKind.raid?.itemId, 3, "другой босс рейда — не тот же энкаунтер");
+  assert.equal(a.byKind.raid?.sourceName, "Sszorak");
+  assert.deepEqual(a.byKind.raid?.pctByTrack, { Champion: 2, Hero: 2.8, Myth: 3.5 });
+  assert.equal(a.byKind.mplus?.itemId, 4, "лучший M+ на треке ключа (Hero)");
+  assert.equal(a.byKind.mplus?.pct, 2.2);
+  assert.equal(a.byKind.mplus?.sourceName, "Altar");
+  assert.equal(a.byKind.vault?.itemId, 5, "тайник — лучший M+ на треке Миф");
+  assert.equal(a.byKind.vault?.pct, 4.2);
+  assert.equal(a.byKind.vault?.track, "Myth");
+  assert.equal(a.byKind.craft, null);
+  assert.equal(a.farmable?.itemId, 4);
+  assert.equal(a.gap, 0.8);
 });

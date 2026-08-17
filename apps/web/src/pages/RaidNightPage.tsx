@@ -10,6 +10,7 @@ import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
 import { SlotFocus } from "../components/SlotFocus";
+import { AltKinds } from "../components/AltKinds";
 
 /**
  * Лут-ночь: выбираем рейд → босса → предмет; справа — кому и насколько это нужно
@@ -195,7 +196,7 @@ export function RaidNightPage() {
 }
 
 
-/** Карточка претендента: полоса статуса слева, имя/спека, слот и место, крупный % сима, альтернатива, gap. */
+/** Карточка претендента: полоса статуса слева, имя/спека, слот и место, крупный % сима, альтернативы по типам контента, gap. */
 function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean; onClick: () => void }) {
   const st = OBTAINED_STYLE[w.obtained];
   const pct = w.upgradePct;
@@ -213,13 +214,15 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
           {w.obtainedDetail ? ` — ${w.obtainedDetail}` : ""}
           {w.equippedIlvl && !w.obtainedDetail ? ` · надето ${w.equippedIlvl}` : ""}
         </div>
-        {a && (
+        {w.alt?.byKind ? (
+          <AltKinds byKind={w.alt.byKind} own={pct} />
+        ) : a ? (
           <div className="cand-alt muted">
             {pct == null
               ? `альт. ${KIND_LABEL[a.kind]}: ${a.name}`
               : `без рейда: ${a.name} (${KIND_LABEL[a.kind]}) ${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}%`}
           </div>
-        )}
+        ) : null}
       </div>
       <div className="cand-pct">
         <div className="cand-pct-value" style={{ color: pct == null ? "var(--text-muted)" : pct > 0.05 ? "var(--ok)" : pct < -0.05 ? "var(--bad)" : "var(--text-muted)" }}>

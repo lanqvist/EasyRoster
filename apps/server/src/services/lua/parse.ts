@@ -196,8 +196,11 @@ class Parser {
   }
 }
 
-/** Сериализация JS → Lua-литерал (для генерации db.lua). */
-export function toLua(value: unknown, indent = 0): string {
+/**
+ * Сериализация JS → Lua-литерал (для генерации db.lua).
+ * inlineFrom — начиная с какой глубины вложенности таблицы пишутся в одну строку (компактный режим; по умолчанию — никогда).
+ */
+export function toLua(value: unknown, indent = 0, inlineFrom = Infinity): string {
   const pad = "  ".repeat(indent);
   if (value === null || value === undefined) return "nil";
   if (typeof value === "boolean") return value ? "true" : "false";
@@ -205,14 +208,15 @@ export function toLua(value: unknown, indent = 0): string {
   if (typeof value === "string") return luaString(value);
   if (Array.isArray(value)) {
     if (value.length === 0) return "{}";
-    return `{ ${value.map((v) => toLua(v, indent + 1)).join(", ")} }`;
+    return `{ ${value.map((v) => toLua(v, indent + 1, inlineFrom)).join(", ")} }`;
   }
   const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => v !== undefined && v !== null);
   if (entries.length === 0) return "{}";
-  const lines = entries.map(([k, v]) => {
-    const key = /^\d+$/.test(k) ? `[${k}]` : /^[A-Za-z_][A-Za-z0-9_]*$/.test(k) ? k : `[${luaString(k)}]`;
-    return `${pad}  ${key} = ${toLua(v, indent + 1)},`;
-  });
+  const keyOf = (k: string) => (/^\d+$/.test(k) ? `[${k}]` : /^[A-Za-z_][A-Za-z0-9_]*$/.test(k) ? k : `[${luaString(k)}]`);
+  if (indent >= inlineFrom) {
+    return `{ ${entries.map(([k, v]) => `${keyOf(k)}=${toLua(v, indent + 1, inlineFrom)}`).join(", ")} }`;
+  }
+  const lines = entries.map(([k, v]) => `${pad}  ${keyOf(k)} = ${toLua(v, indent + 1, inlineFrom)},`);
   return `{\n${lines.join("\n")}\n${pad}}`;
 }
 

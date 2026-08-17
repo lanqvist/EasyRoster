@@ -275,42 +275,84 @@ export function buildCharacterBis(input: EngineInput): BisCharacterView {
   };
 }
 
-/** Альтернативы по слоту: другой источник (нет общего босса), фармабельные — M+/крафт. */
+/**
+ * Альтернативы по слоту: другой источник (нет общего босса), фармабельные — M+/крафт,
+ * плюс разбивка по типам контента (M+ / другой босс рейда / тайник / крафт) — чтобы совет видел,
+ * что персонаж может получить в этот слот помимо выпавшего предмета и сколько это даст.
+ */
 export function computeAlternatives(entries: BisEntry[]): void {
   const encSet = (e: BisEntry) => new Set(e.drops.map((d) => `${d.instanceId}|${d.encounterId}`));
-  const toRef = (o: BisEntry): AltRef => ({
+  // источник альтернативы: рейд/катализатор — босс; M+ — подземелье (не псевдо-инстанс «-1 Mythic+ Dungeons»)
+  const sourceName = (o: BisEntry) => {
+    const real = o.drops.filter((x) => x.instanceId > 0);
+    if (o.sourceKind === "mplus") {
+      const d = real.find((x) => x.kind === "mplus") ?? real[0];
+      return d?.instanceName ?? "";
+    }
+    const d = real.find((x) => x.kind === "raid") ?? real.find((x) => x.kind === "world") ?? real[0] ?? o.drops[0];
+    return d?.encounterName ?? o.sources[0]?.note ?? "";
+  };
+  const toRef = (o: BisEntry, pct: number, track: string | null): AltRef => ({
     itemId: o.itemId,
     name: o.itemNameRu ?? o.itemName,
-    pct: o.simSelected?.pct ?? 0,
+    pct,
     kind: o.sourceKind,
-    sourceName: o.drops[0]?.encounterName ?? o.sources[0]?.note ?? "",
+    sourceName: sourceName(o),
     icon: o.icon,
     quality: o.quality,
     bonusIds: o.bonusIds,
+    track,
+    pctByTrack: o.simByTrack,
   });
+  const maxBy = (list: BisEntry[], val: (o: BisEntry) => number | null | undefined): { e: BisEntry; v: number } | null => {
+    let best: { e: BisEntry; v: number } | null = null;
+    for (const o of list) {
+      const v = val(o);
+      if (v == null) continue;
+      if (!best || v > best.v) best = { e: o, v };
+    }
+    return best;
+  };
+  const isFarm = (o: BisEntry) => o.sourceKind === "mplus" || o.sourceKind === "craft";
+  const isRaid = (o: BisEntry) => o.sourceKind === "raid" || o.sourceKind === "catalyst" || o.sourceKind === "world";
+
   for (const e of entries) {
     const mine = encSet(e);
     const others = entries.filter((o) => o !== e && o.itemId !== e.itemId && ![...encSet(o)].some((k) => mine.has(k)));
     if (e.simSelected) {
+      const val = (o: BisEntry) => o.simSelected?.pct;
       const withSim = others.filter((o) => o.simSelected);
-      const best = withSim.reduce<BisEntry | null>((a, o) => (!a || o.simSelected!.pct > a.simSelected!.pct ? o : a), null);
-      const farm = withSim.filter((o) => o.sourceKind === "mplus" || o.sourceKind === "craft").reduce<BisEntry | null>((a, o) => (!a || o.simSelected!.pct > a.simSelected!.pct ? o : a), null);
+      const best = maxBy(withSim, val);
+      const farm = maxBy(withSim.filter(isFarm), val);
+      const mplus = maxBy(withSim.filter((o) => o.sourceKind === "mplus"), val);
+      const raid = maxBy(withSim.filter(isRaid), val);
+      const craft = maxBy(withSim.filter((o) => o.sourceKind === "craft"), val);
+      // тайник: M+ предметы на треке Миф (в тайнике из ключей падает Myth-трек)
+      const vault = maxBy(others.filter((o) => o.sourceKind === "mplus"), (o) => o.simByTrack?.Myth);
+      const ref = (m: { e: BisEntry; v: number } | null, track?: string | null) => (m ? toRef(m.e, m.v, track === undefined ? (m.e.simSelected?.track ?? null) : track) : null);
       const alt: BisAlternatives = {
-        best: best ? toRef(best) : null,
-        farmable: farm ? toRef(farm) : null,
-        gap: Math.round((e.simSelected.pct - Math.max(0, farm?.simSelected?.pct ?? 0)) * 100) / 100,
+        best: ref(best),
+        farmable: ref(farm),
+        gap: Math.round((e.simSelected.pct - Math.max(0, farm?.v ?? 0)) * 100) / 100,
         count: withSim.filter((o) => o.simSelected!.pct >= e.simSelected!.pct * 0.95 && o.simSelected!.pct > 0).length,
+        byKind: { mplus: ref(mplus), raid: ref(raid), vault: ref(vault, "Myth"), craft: ref(craft) },
       };
       e.alternatives = alt;
     } else {
       // без сима — по баллу объединения
-      const best = others.reduce<BisEntry | null>((a, o) => (!a || o.score > a.score ? o : a), null);
-      const farm = others.filter((o) => o.sourceKind === "mplus" || o.sourceKind === "craft").reduce<BisEntry | null>((a, o) => (!a || o.score > a.score ? o : a), null);
+      const val = (o: BisEntry) => o.score;
+      const ref = (m: { e: BisEntry; v: number } | null) => (m ? toRef(m.e, m.v, null) : null);
       e.alternatives = {
-        best: best ? { ...toRef(best), pct: best.score } : null,
-        farmable: farm ? { ...toRef(farm), pct: farm.score } : null,
+        best: ref(maxBy(others, val)),
+        farmable: ref(maxBy(others.filter(isFarm), val)),
         gap: null,
         count: others.filter((o) => o.score >= e.score * 0.95).length,
+        byKind: {
+          mplus: ref(maxBy(others.filter((o) => o.sourceKind === "mplus"), val)),
+          raid: ref(maxBy(others.filter(isRaid), val)),
+          vault: null,
+          craft: ref(maxBy(others.filter((o) => o.sourceKind === "craft"), val)),
+        },
       };
     }
   }

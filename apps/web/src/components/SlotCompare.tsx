@@ -4,6 +4,7 @@ import { ItemIcon, ItemLink } from "./ItemLink";
 import { KIND_ICON, KIND_LABEL } from "./SourceChips";
 import { OBTAINED_STYLE } from "./BisSlotList";
 import { TrackBreakdown } from "../lib/difficulty";
+import { AltKinds } from "./AltKinds";
 
 const QUALITY_NUM_BY_TYPE: Record<string, number> = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, ARTIFACT: 6, HEIRLOOM: 7 };
 const pctText = (v: number | null | undefined) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(1)}%`);
@@ -44,14 +45,16 @@ function CandidateCard({ e, ru, onPin, onExclude }: { e: BisEntry; ru: boolean; 
           {dt ? ` · ${TRACK_NAMES_RU[dt.name] ?? dt.name}${dt.ilvl ? ` ${dt.ilvl}` : ""}` : ""}
           {e.bisTrack && e.bisTrack.name !== dt?.name ? ` · BiS на ${TRACK_NAMES_RU[e.bisTrack.name] ?? e.bisTrack.name}` : ""}
         </div>
-        {alt && e.rank <= 2 && (
+        {a?.byKind && e.rank <= 2 ? (
+          <AltKinds byKind={a.byKind} own={pct ?? null} ru={ru} />
+        ) : alt && e.rank <= 2 ? (
           <div className="cand-alt muted" style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
             <span>без рейда:</span>
             <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={14} muted style={{ fontSize: 12 }} />
             <span>({KIND_LABEL[alt.kind]}) {pct != null ? pctText(alt.pct) : `балл ${Math.round(alt.pct)}`}</span>
             {a?.gap != null && (a.gap > 0.05 ? <span style={{ color: a.gap >= 2 ? "var(--ok)" : a.gap >= 0.8 ? "var(--warn)" : undefined }}>· ▲{a.gap.toFixed(1)}</span> : <span>· заменим</span>)}
           </div>
-        )}
+        ) : null}
       </div>
       <div className="cand-pct">
         <div className="cand-pct-value" style={{ color: pctColor(pct), fontSize: 18 }} title={simTip}>
