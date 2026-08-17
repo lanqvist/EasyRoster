@@ -69,7 +69,7 @@ export class SimService {
       const r = byChar.get(c.id);
       const role = c.activeSpecId ? SPEC_BY_ID.get(c.activeSpecId)?.role ?? null : null;
       const supported = role === "DAMAGER" || role === "TANK";
-      const stale = r?.ok ? Date.now() - r.finished_at > cfg.maxAgeDays * 86400000 : true;
+      const stale = r?.ok && r.finished_at ? Date.now() - r.finished_at > cfg.maxAgeDays * 86400000 : true;
       const hashNow = this.equipmentHash(c);
       out.push({
         characterId: c.id,
@@ -77,7 +77,7 @@ export class SimService {
         supported,
         reason: supported ? null : role === "HEALER" ? "хилы: SimC не симулирует лечение" : "нет спеки/экипировки",
         lastRunAt: r?.finished_at ?? null,
-        lastOk: r ? !!r.ok : null,
+        lastOk: r?.finished_at ? !!r.ok : null,
         lastMessage: r?.message ?? null,
         profilesets: r?.profilesets ?? null,
         baseline: r?.baseline ?? null,
