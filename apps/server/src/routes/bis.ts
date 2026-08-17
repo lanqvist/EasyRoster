@@ -48,7 +48,10 @@ export async function bisRoutes(app: FastifyInstance, ctx: AppContext): Promise<
     return view;
   });
 
-  app.get("/api/bis/team", async () => ctx.bis.team());
+  app.get("/api/bis/team", async (req) => {
+    const q = z.object({ difficulty: z.enum(["normal", "heroic", "mythic"]).optional() }).parse(req.query);
+    return ctx.bis.team(q.difficulty);
+  });
 
   /** Импорт отчёта Raidbots Droptimizer по ссылке. */
   app.post("/api/bis/droptimizer", async (req, reply) => {

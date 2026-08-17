@@ -57,7 +57,7 @@ export const api = {
     request<{ started: true }>(`/api/bis/sources/${source}/refresh`, { method: "POST", body: JSON.stringify(body) }),
   bisCharacter: (id: number, spec?: number, difficulty?: string) =>
     request<BisCharacterView>(`/api/bis/character/${id}?${spec ? `spec=${spec}&` : ""}${difficulty ? `difficulty=${difficulty}` : ""}`),
-  bisTeam: () => request<BisTeamRow[]>("/api/bis/team"),
+  bisTeam: (difficulty?: string) => request<BisTeamRow[]>(`/api/bis/team${difficulty ? `?difficulty=${difficulty}` : ""}`),
   bisItem: (itemId: number, difficulty?: string) => request<ItemWanter[]>(`/api/bis/item/${itemId}${difficulty ? `?difficulty=${difficulty}` : ""}`),
   bisWanters: (itemIds: number[], difficulty?: string) => request<Record<number, ItemWanter[]>>("/api/bis/wanters", { method: "POST", body: JSON.stringify({ itemIds, difficulty }) }),
   bisManualAdd: (body: { characterId: number | null; specId: number; slot: string; itemId: number; action: "pin" | "exclude"; note?: string | null }) =>

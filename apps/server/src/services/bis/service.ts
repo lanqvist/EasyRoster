@@ -303,11 +303,12 @@ export class BisService {
     });
   }
 
-  team(): BisTeamRow[] {
+  team(difficulty?: RaidDifficulty): BisTeamRow[] {
     const rows: BisTeamRow[] = [];
     for (const c of this.chars.listRaiders()) {
-      const view = this.characterBis(c);
+      const view = this.characterBis(c, undefined, { difficulty });
       const perSlot: Record<string, ObtainedStatus | "none"> = {};
+      const perSlotBest: BisTeamRow["perSlotBest"] = {};
       if (view) {
         for (const s of view.slots) {
           const need = s.slot === "FINGER" || s.slot === "TRINKET" ? 2 : 1;
@@ -319,6 +320,8 @@ export class BisService {
           // худший статус среди нужных
           const order: ObtainedStatus[] = ["yes", "lower", "catalyst", "no"];
           perSlot[s.slot] = best.map((b) => b.obtained).sort((a, b) => order.indexOf(b) - order.indexOf(a))[0]!;
+          const top = best.find((b) => b.obtained !== "yes") ?? best[0]!;
+          perSlotBest[s.slot] = { pct: top.simSelected?.pct ?? null, name: top.itemNameRu ?? top.itemName, obtained: top.obtained };
         }
       }
       rows.push({
@@ -330,6 +333,10 @@ export class BisService {
         ilvl: c.ilvlEquipped,
         coverage: view?.coverage ?? null,
         perSlot,
+        perSlotBest,
+        hasSim: !!view?.personalSim,
+        simAt: view?.personalSim?.fetchedAt ?? null,
+        role: c.activeSpecId ? SPEC_BY_ID.get(c.activeSpecId)?.role ?? null : null,
       });
     }
     return rows;

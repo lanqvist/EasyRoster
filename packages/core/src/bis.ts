@@ -135,6 +135,11 @@ export interface BisTeamRow {
   ilvl: number | null;
   coverage: BisCharacterView["coverage"] | null;
   perSlot: Record<string, ObtainedStatus | "none">;
+  /** лучший кандидат слота: % сима (для выбранной сложности) и название — для тепловой карты */
+  perSlotBest: Record<string, { pct: number | null; name: string; obtained: ObtainedStatus } | null>;
+  hasSim: boolean;
+  simAt: number | null;
+  role: "TANK" | "HEALER" | "DAMAGER" | null;
 }
 
 /** Кому нужен предмет (для лут-таблиц и лут-ночи). */

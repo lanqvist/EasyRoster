@@ -6,24 +6,27 @@ import { classColor, relTime, specName } from "../lib/format";
 import { useConfig } from "../lib/config-context";
 import { OBTAINED_STYLE, SOURCE_LABEL } from "../components/BisSlotList";
 import { CharacterDrawer } from "../components/CharacterDrawer";
+import { BisHeatmap } from "../components/BisHeatmap";
+import { useDifficulty } from "../lib/difficulty";
 
 export function BisPage() {
   const { config } = useConfig();
   const [status, setStatus] = useState<{ sources: BisSourceStatus[]; progress: { source: string; done: number; total: number; current: string } | null } | null>(null);
   const [team, setTeam] = useState<BisTeamRow[]>([]);
+  const { difficulty } = useDifficulty();
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [s, t] = await Promise.all([api.bisStatus(), api.bisTeam()]);
+      const [s, t] = await Promise.all([api.bisStatus(), api.bisTeam(difficulty)]);
       setStatus(s);
       setTeam(t);
       setErr(null);
     } catch (e) {
       setErr((e as Error).message);
     }
-  }, []);
+  }, [difficulty]);
 
   useEffect(() => {
     void load();
@@ -62,7 +65,7 @@ export function BisPage() {
             <thead>
               <tr>
                 <th>Источник</th>
-                <th className="num">Спек</th>
+                <th className="num" title="спек (для общих источников) или персонажей (для персональных симов)">Спек/перс.</th>
                 <th className="num">Кандидатов</th>
                 <th>Обновлено</th>
                 <th></th>
@@ -112,63 +115,7 @@ export function BisPage() {
 
       <SimPanel />
 
-      {team.length === 0 ? (
-        <div className="placeholder">Нет рейдеров с синхронизированной спекой. Обновите ростер и источники BiS.</div>
-      ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ fontSize: 12 }}>
-            <thead>
-              <tr>
-                <th>Персонаж</th>
-                <th className="num">ilvl</th>
-                <th className="num" title="Слотов BiS получено на макс. треке / всего">BiS %</th>
-                {slots.map((s) => (
-                  <th key={s} style={{ textAlign: "center", fontSize: 10, padding: "4px 2px" }} title={SLOT_NAMES_RU[s]}>
-                    {(SLOT_NAMES_RU[s] ?? s).slice(0, 4)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {team.map((r) => (
-                <tr key={r.characterId} style={{ cursor: "pointer" }} onClick={() => setSelected(r.characterId)}>
-                  <td>
-                    <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
-                    <span className="muted"> · {specName(r.specId)}</span>
-                  </td>
-                  <td className="num">{r.ilvl?.toFixed(0) ?? "—"}</td>
-                  <td className="num">
-                    {r.coverage ? (
-                      <span title={`получено ${r.coverage.obtained}, ниже трек/катализатор ${r.coverage.lower}, всего ${r.coverage.slots}`}>
-                        {r.coverage.pct}%
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  {slots.map((s) => {
-                    const st = r.perSlot[s];
-                    const style = st && st !== "none" ? OBTAINED_STYLE[st] : null;
-                    return (
-                      <td key={s} style={{ textAlign: "center", padding: "3px 2px" }} title={style?.label ?? "нет данных"}>
-                        <span style={{ display: "inline-block", width: 14, height: 14, borderRadius: 3, background: style ? style.color : "var(--bg-elev-2)", opacity: style ? 0.9 : 0.5 }} />
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="muted row" style={{ fontSize: 11, marginTop: 8, gap: 14 }}>
-            {(["yes", "lower", "catalyst", "no"] as const).map((k) => (
-              <span key={k}>
-                <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: OBTAINED_STYLE[k].color, marginRight: 4 }} />
-                {OBTAINED_STYLE[k].label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <BisHeatmap team={team} onSelect={setSelected} />
 
       {selected !== null && <CharacterDrawer id={selected} onClose={() => setSelected(null)} initialTab="bis" />}
     </div>

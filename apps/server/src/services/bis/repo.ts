@@ -54,7 +54,7 @@ export class BisRepo {
   sourceStats(): Array<{ source: BisSource; specs: number; candidates: number; lastFetched: number | null }> {
     return (
       this.db.conn
-        .prepare("SELECT source, COUNT(DISTINCT spec_id) specs, COUNT(*) candidates, MAX(fetched_at) last FROM bis_candidates WHERE character_id IS NULL GROUP BY source")
+        .prepare("SELECT source, COUNT(DISTINCT CASE WHEN character_id IS NULL THEN spec_id ELSE character_id END) specs, COUNT(*) candidates, MAX(fetched_at) last FROM bis_candidates GROUP BY source")
         .all() as any[]
     ).map((r) => ({ source: r.source, specs: r.specs, candidates: r.candidates, lastFetched: r.last }));
   }
