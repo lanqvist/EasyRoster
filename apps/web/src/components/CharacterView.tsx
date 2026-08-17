@@ -6,6 +6,7 @@ import { classColor, className, fmtDate, relTime, ROLE_RU, roleOf, specName } fr
 import { useConfig } from "../lib/config-context";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { SlotCompare } from "./SlotCompare";
+import { ClassIcon } from "./ClassIcon";
 import { SOURCE_LABEL } from "./BisSlotList";
 import { DroptimizerBox, ManualRules, RaidSpecBox, SimBox, SimResults } from "./CharacterDrawer";
 
@@ -76,7 +77,7 @@ export function CharacterView({ id, onClose, layout = "page" }: { id: number; on
           {c.avatarUrl && <img src={c.avatarUrl} alt="" width={44} height={44} style={{ borderRadius: 6, border: "1px solid var(--border)" }} />}
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.2 }}>
-              <span style={{ color: classColor(c.classId) }}>{c.name}</span>
+              <ClassIcon classId={c.classId} size={22} /><span style={{ color: classColor(c.classId) }}>{c.name}</span>
               <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}> — {c.realmName || c.realmSlug}</span>
             </div>
             <div className="muted" style={{ fontSize: 12 }}>

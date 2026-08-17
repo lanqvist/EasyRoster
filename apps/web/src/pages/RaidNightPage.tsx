@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
 import { ItemIcon, ItemLink } from "../components/ItemLink";
+import { ClassIcon } from "../components/ClassIcon";
 import { useConfig } from "../lib/config-context";
 import { classColor, QUALITY_COLORS_NUM, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
@@ -234,7 +235,7 @@ function CandidateCard({ w, active, onClick }: { w: ItemWanter; active: boolean;
     <div className={`cand-card${active ? " active" : ""}`} onClick={onClick} style={{ borderLeftColor: st.color }}>
       <div className="cand-main">
         <div className="cand-name">
-          <span style={{ color: classColor(w.classId), fontWeight: 700 }}>{w.name}</span>
+          <ClassIcon classId={w.classId} size={18} /><span style={{ color: classColor(w.classId), fontWeight: 700 }}>{w.name}</span>
           <span className="muted"> · {specName(w.specId)}</span>
         </div>
         <div className="cand-meta muted">

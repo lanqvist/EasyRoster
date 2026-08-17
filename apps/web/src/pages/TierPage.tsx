@@ -4,6 +4,7 @@ import { api } from "../lib/api";
 import { classColor, className, relTime, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "../components/BisSlotList";
 import { CharacterDrawer } from "../components/CharacterDrawer";
+import { ClassIcon } from "../components/ClassIcon";
 
 const TIER_SLOT_ORDER = ["HEAD", "SHOULDER", "CHEST", "HANDS", "LEGS"];
 const SLOT_SHORT: Record<string, string> = { HEAD: "Гол", SHOULDER: "Плч", CHEST: "Грд", HANDS: "Кст", LEGS: "Ног" };
@@ -72,7 +73,7 @@ export function TierPage() {
             {rows.map((r) => (
               <tr key={r.characterId} style={{ cursor: "pointer" }} onClick={() => setSel(r.characterId)}>
                 <td>
-                  <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
+                  <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                   <span className="muted" style={{ fontSize: 12 }}> · {specName(r.specId)}</span>
                 </td>
                 <td className="num" style={{ whiteSpace: "nowrap" }}>

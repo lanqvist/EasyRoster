@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { useDifficulty } from "../lib/difficulty";
 import { classColor, specName } from "../lib/format";
 import { ItemLink } from "./ItemLink";
+import { ClassIcon } from "./ClassIcon";
 import { KIND_LABEL } from "./SourceChips";
 import { OBTAINED_STYLE } from "./BisSlotList";
 
@@ -95,7 +96,7 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
     <div className="slot-focus" style={{ fontSize: 14 }}>
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <span style={{ color: classColor(c.classId), fontWeight: 600, fontSize: 16 }}>{c.name}</span>
+          <ClassIcon classId={c.classId} size={20} /><span style={{ color: classColor(c.classId), fontWeight: 600, fontSize: 16 }}>{c.name}</span>
           <span className="muted"> · {specName(c.activeSpecId)} · ilvl {c.ilvlEquipped?.toFixed(0) ?? "—"}{bis ? ` · BiS ${bis.coverage.pct}%` : ""}</span>
         </div>
         <Link to={`/character/${c.id}`} className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }}>карточка ↗</Link>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { BIS_SLOT_ORDER, SLOT_NAMES_RU, type BisTeamRow } from "@easyroster/core";
 import { classColor, relTime, ROLE_RU, specName } from "../lib/format";
 import { OBTAINED_STYLE } from "./BisSlotList";
+import { ClassIcon } from "./ClassIcon";
 import { DifficultySwitch } from "../lib/difficulty";
 
 const SLOT_SHORT: Record<string, string> = {
@@ -80,7 +81,7 @@ export function BisHeatmap({ team, onSelect }: { team: BisTeamRow[]; onSelect: (
               {rows.map((r) => (
                 <tr key={r.characterId} style={{ cursor: "pointer" }} onClick={() => onSelect(r.characterId)}>
                   <td style={{ whiteSpace: "nowrap" }}>
-                    <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
+                    <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                     <span className="muted"> · {specName(r.specId)}</span>
                   </td>
                   <td className="muted">{r.role ? ROLE_RU[r.role] : "—"}</td>

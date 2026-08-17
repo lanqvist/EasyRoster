@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { useConfig } from "../lib/config-context";
 import { classColor, className, relTime, ROLE_RU, roleOf, specName } from "../lib/format";
 import { SyncBar } from "../components/SyncBar";
+import { ClassIcon } from "../components/ClassIcon";
 import { CharacterDrawer } from "../components/CharacterDrawer";
 
 type SortKey = "name" | "rank" | "ilvl" | "class" | "login" | "role";
@@ -123,7 +124,7 @@ export function RosterPage() {
                 return (
                   <tr key={r.id} className={selected === r.id ? "selected" : undefined} style={{ cursor: "pointer", opacity: r.inRaidRoster ? 1 : 0.55 }} onClick={() => setSelected(r.id)}>
                     <td>
-                      <span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
+                      <ClassIcon classId={r.classId} /><span style={{ color: classColor(r.classId), fontWeight: 600 }}>{r.name}</span>
                       <span className="muted"> — {r.realmName || r.realmSlug}</span>
                       <Link to={`/character/${r.id}`} className="muted" style={{ marginLeft: 6, fontSize: 11 }} title="Открыть страницу персонажа" onClick={(e) => e.stopPropagation()}>↗</Link>
                     </td>
