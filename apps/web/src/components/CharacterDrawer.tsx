@@ -127,7 +127,7 @@ export function SimResults({ characterId, locale, onChanged }: { characterId: nu
           <div className="row" style={{ marginBottom: 8 }}>
             <select value={track} onChange={(e) => setTrack(e.target.value)}>
               <option value="">Все треки</option>
-              {tracks.map((t) => <option key={t} value={t}>{t}</option>)}
+              {tracks.map((t) => <option key={t} value={t}>{TRACK_NAMES_RU[t] ?? t}</option>)}
             </select>
             <select value={slotF} onChange={(e) => setSlotF(e.target.value)}>
               <option value="">Все слоты</option>
@@ -160,7 +160,7 @@ export function SimResults({ characterId, locale, onChanged }: { characterId: nu
                       {m.tokenId ? <span className="muted"> · токен</span> : null}
                     </td>
                     <td className="muted">{SLOT_NAMES_RU[r.slot] ?? r.slot}</td>
-                    <td className="muted">{m.track}</td>
+                    <td className="muted">{TRACK_NAMES_RU[m.track] ?? m.track}</td>
                     <td className="num" style={{ color: col(r.score), fontWeight: 600 }}>{r.score > 0 ? "+" : ""}{Number(r.score).toFixed(2)}%</td>
                     {isTank && <td className="num" style={{ color: col(dpsPct) }}>{dpsPct > 0 ? "+" : ""}{dpsPct.toFixed(2)}%</td>}
                     {isTank && <td className="num" style={{ color: col(m.dtpsPct, true) }}>{m.dtpsPct != null ? `${m.dtpsPct > 0 ? "+" : ""}${m.dtpsPct.toFixed(2)}%` : "—"}</td>}

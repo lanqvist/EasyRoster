@@ -235,15 +235,69 @@ export class StaticDataService {
 
   // ------------------------------------------------------------ queries
 
+  /** Показывать русские названия (locale ru_RU) — применяется ко всем выдачам инстансов/боссов. */
+  private get ru(): boolean {
+    return this.config.get().locale === "ru_RU";
+  }
+
+  /** Перевод служебных групп Raidbots (у них нет id в журнале Blizzard). */
+  private pseudoRu(name: string): string {
+    return name
+      .replace(/^Catalyst( - Midnight)? Season (\d+)$/i, "Катализатор (сезон $2)")
+      .replace(/^Catalyst Season (\d+)$/i, "Катализатор (сезон $1)")
+      .replace(/^Normal Dungeons$/i, "Подземелья")
+      .replace(/^Mythic\+ Dungeons$/i, "Ключи M+")
+      .replace(/^Season (\d+) Raids$/i, "Рейды сезона $1")
+      .replace(/^Trash Drop$/i, "Треш")
+      .replace(/^Delves Season (\d+)$/i, "Вылазки (сезон $1)")
+      .replace(/^Prey Season (\d+)$/i, "Добыча (сезон $1)")
+      .replace(/^PVP Season (\d+) \((Honor|Conquest|Bloody Tokens)\)$/i, "PvP сезон $1 ($2)")
+      .replace(/^World Bosses?$/i, "Мировые боссы")
+      .replace(/^Crafted$/i, "Крафт")
+      .replace(/^Great Vault$/i, "Великий тайник");
+  }
+
+  private mapInstance(r: any): InstanceRow {
+    const encs = JSON.parse(r.encounters) as Array<{ id: number; name: string }>;
+    const encRu: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+    const ru = this.ru;
+    return {
+      id: r.id,
+      name: ru ? (r.name_ru ?? this.pseudoRu(r.name)) : r.name,
+      nameEn: r.name,
+      type: r.type,
+      order: r.sort_order,
+      encounters: encs.map((e) => ({ id: e.id, name: ru ? (encRu[String(e.id)] ?? this.pseudoRu(e.name)) : e.name, nameEn: e.name })),
+    };
+  }
+
   instance(id: number): InstanceRow | undefined {
     const r = this.db.conn.prepare("SELECT * FROM instances WHERE id = ?").get(id) as any;
-    return r ? { id: r.id, name: r.name, type: r.type, order: r.sort_order, encounters: JSON.parse(r.encounters) } : undefined;
+    return r ? this.mapInstance(r) : undefined;
+  }
+
+  /** Инстансы без русских названий (для локализации через Blizzard). */
+  instancesWithoutRu(ids: number[]): Array<{ id: number; encounters: number[] }> {
+    const out: Array<{ id: number; encounters: number[] }> = [];
+    for (const id of ids) {
+      const r = this.db.conn.prepare("SELECT id, name_ru, encounters, encounters_ru FROM instances WHERE id = ?").get(id) as any;
+      if (!r) continue;
+      const encs = (JSON.parse(r.encounters) as Array<{ id: number }>).map((e) => e.id).filter((e) => e > 0);
+      const have: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+      const missing = encs.filter((e) => !have[String(e)]);
+      if (!r.name_ru || missing.length) out.push({ id, encounters: missing });
+    }
+    return out;
+  }
+
+  setInstanceRu(id: number, nameRu: string | null, encountersRu: Record<string, string>): void {
+    const r = this.db.conn.prepare("SELECT encounters_ru FROM instances WHERE id = ?").get(id) as any;
+    const merged = { ...(r?.encounters_ru ? JSON.parse(r.encounters_ru) : {}), ...encountersRu };
+    this.db.conn.prepare("UPDATE instances SET name_ru = COALESCE(?, name_ru), encounters_ru = ? WHERE id = ?").run(nameRu, JSON.stringify(merged), id);
   }
 
   listInstances(): InstanceRow[] {
-    return (this.db.conn.prepare("SELECT * FROM instances ORDER BY sort_order, id").all() as any[]).map((r) => ({
-      id: r.id, name: r.name, type: r.type, order: r.sort_order, encounters: JSON.parse(r.encounters),
-    }));
+    return (this.db.conn.prepare("SELECT * FROM instances ORDER BY sort_order, id").all() as any[]).map((r) => this.mapInstance(r));
   }
 
   item(id: number): ItemRow | undefined {
@@ -273,15 +327,24 @@ export class StaticDataService {
   /** Источники предмета (для UI «откуда падает»). */
   itemSources(itemId: number): Array<{ instanceId: number; encounterId: number; instanceName: string; encounterName: string }> {
     const rows = this.db.conn
-      .prepare("SELECT s.instance_id, s.encounter_id, i.name AS iname, i.encounters FROM item_sources s LEFT JOIN instances i ON i.id = s.instance_id WHERE s.item_id = ?")
+      .prepare("SELECT s.instance_id, s.encounter_id, i.name AS iname, i.name_ru AS iname_ru, i.encounters, i.encounters_ru FROM item_sources s LEFT JOIN instances i ON i.id = s.instance_id WHERE s.item_id = ?")
       .all(itemId) as any[];
+    const ru = this.ru;
     return rows.map((r) => {
       const encs = r.encounters ? (JSON.parse(r.encounters) as Array<{ id: number; name: string }>) : [];
+      const encRu: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+      const encEn = encs.find((e) => e.id === r.encounter_id)?.name;
+      // для M+ группы (-1) encounterId = id подземелья → берём его русское имя из таблицы инстансов
+      let encName = ru && encRu[String(r.encounter_id)] ? encRu[String(r.encounter_id)]! : encEn;
+      if (!encName || (ru && !encRu[String(r.encounter_id)] && r.encounter_id > 0 && r.instance_id < 0)) {
+        const inner = this.db.conn.prepare("SELECT name, name_ru FROM instances WHERE id = ?").get(r.encounter_id) as any;
+        if (inner) encName = ru && inner.name_ru ? inner.name_ru : (encName ?? inner.name);
+      }
       return {
         instanceId: r.instance_id,
         encounterId: r.encounter_id,
-        instanceName: r.iname ?? `#${r.instance_id}`,
-        encounterName: encs.find((e) => e.id === r.encounter_id)?.name ?? `#${r.encounter_id}`,
+        instanceName: ru ? (r.iname_ru ?? (r.iname ? this.pseudoRu(r.iname) : `#${r.instance_id}`)) : (r.iname ?? `#${r.instance_id}`),
+        encounterName: encName ? (ru ? this.pseudoRu(encName) : encName) : `#${r.encounter_id}`,
       };
     });
   }
@@ -315,6 +378,15 @@ export class StaticDataService {
         it.inventoryType ?? null, it.inventoryType != null ? INVENTORY_TYPE_TO_SLOT[it.inventoryType] ?? null : null,
         it.baseIlvl ?? null, it.itemSetId ?? null,
       );
+  }
+
+  /** Из набора id — те, что есть в справочнике, но без name_ru. */
+  itemsWithoutRu(ids: number[]): number[] {
+    const q = this.db.conn.prepare("SELECT name_ru FROM items WHERE id = ?");
+    return [...new Set(ids)].filter((id) => {
+      const r = q.get(id) as any;
+      return r && !r.name_ru;
+    });
   }
 
   missingItemIds(ids: number[]): number[] {

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useConfig } from "../lib/config-context";
 import { RankPicker } from "../components/RankPicker";
+import { FIGHT_STYLE_RU } from "../lib/format";
+import { TRACK_NAMES_RU } from "@easyroster/core";
 import { WowIntegrationCard } from "../components/WowIntegrationCard";
 
 export function SettingsPage() {
@@ -140,10 +142,10 @@ export function SettingsPage() {
             <input type="checkbox" checked={sim.autoAfterSync} onChange={(e) => setSim({ ...sim, autoAfterSync: e.target.checked })} /> запускать после синка при смене экипировки
           </label>
           <div className="field">
-            <label>Fight style</label>
+            <label>Сценарий боя</label>
             <select value={sim.fightStyle} onChange={(e) => setSim({ ...sim, fightStyle: e.target.value as typeof sim.fightStyle })}>
               {["Patchwerk", "HecticAddCleave", "DungeonSlice", "LightMovement", "HeavyMovement"].map((f) => (
-                <option key={f} value={f}>{f}</option>
+                <option key={f} value={f}>{FIGHT_STYLE_RU[f] ?? f}</option>
               ))}
             </select>
           </div>
@@ -157,22 +159,22 @@ export function SettingsPage() {
             <div className="row">
               {["Champion", "Hero", "Myth"].map((t) => (
                 <label key={t} className="row" style={{ gap: 4 }}>
-                  <input type="checkbox" checked={sim.raidTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, raidTracks: (e.target.checked ? [...sim.raidTracks, t] : sim.raidTracks.filter((x) => x !== t)) as any })} /> {t}
+                  <input type="checkbox" checked={sim.raidTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, raidTracks: (e.target.checked ? [...sim.raidTracks, t] : sim.raidTracks.filter((x) => x !== t)) as any })} /> {TRACK_NAMES_RU[t] ?? t}
                 </label>
               ))}
             </div>
-            <span className="hint">Normal → Champion, Heroic → Hero, Mythic → Myth</span>
+            <span className="hint">Normal → Чемпион, Heroic → Герой, Mythic → Миф</span>
           </div>
           <div className="field">
             <label>Треки M+</label>
             <div className="row">
               {["Champion", "Hero", "Myth"].map((t) => (
                 <label key={t} className="row" style={{ gap: 4 }}>
-                  <input type="checkbox" checked={sim.dungeonTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, dungeonTracks: (e.target.checked ? [...sim.dungeonTracks, t] : sim.dungeonTracks.filter((x) => x !== t)) as any })} /> {t}
+                  <input type="checkbox" checked={sim.dungeonTracks.includes(t as any)} onChange={(e) => setSim({ ...sim, dungeonTracks: (e.target.checked ? [...sim.dungeonTracks, t] : sim.dungeonTracks.filter((x) => x !== t)) as any })} /> {TRACK_NAMES_RU[t] ?? t}
                 </label>
               ))}
             </div>
-            <span className="hint">дроп из ключа — Hero, тайник — Myth</span>
+            <span className="hint">дроп из ключа — Герой, тайник — Миф</span>
           </div>
           <div className="field">
             <label>Потоков (0 = все минус один)</label>
@@ -194,9 +196,9 @@ export function SettingsPage() {
           <div className="field">
             <label>Сложность рейда по умолчанию (треки/% в BiS и db.lua)</label>
             <select value={raidDiff} onChange={(e) => setRaidDiff(e.target.value as typeof raidDiff)}>
-              <option value="normal">Normal → Champion</option>
-              <option value="heroic">Heroic → Hero</option>
-              <option value="mythic">Mythic → Myth</option>
+              <option value="normal">Normal → Чемпион</option>
+              <option value="heroic">Heroic → Герой</option>
+              <option value="mythic">Mythic → Миф</option>
             </select>
           </div>
           <div className="field">

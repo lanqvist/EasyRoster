@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { SimStatus } from "@easyroster/core";
 import { api } from "../lib/api";
 import { useConfig } from "../lib/config-context";
-import { relTime } from "../lib/format";
+import { relTime, FIGHT_STYLE_RU } from "../lib/format";
+import { TRACK_NAMES_RU } from "@easyroster/core";
 
 /** Панель автосима SimulationCraft: установка, очередь, состояние по персонажам. */
 export function SimPanel() {
@@ -49,7 +50,7 @@ export function SimPanel() {
           <b>Автосим SimulationCraft</b>{" "}
           <span className="muted" style={{ fontSize: 12 }}>
             {st?.simcVersion ? `simc ${st.simcVersion.replace(/^simc-/, "")}` : "не установлен"} · {st?.cpuThreads ?? "?"} потоков ·{" "}
-            {config?.sim.fightStyle} · ошибка {config?.sim.targetError}% · рейд {config?.sim.raidTracks.join("/")}, M+ {config?.sim.dungeonTracks.join("/")}
+            {FIGHT_STYLE_RU[config?.sim.fightStyle ?? ""] ?? config?.sim.fightStyle} · погрешность {config?.sim.targetError}% · рейд {config?.sim.raidTracks.map((t) => TRACK_NAMES_RU[t] ?? t).join("/")}, M+ {config?.sim.dungeonTracks.map((t) => TRACK_NAMES_RU[t] ?? t).join("/")}
           </span>
         </div>
         <div className="row">

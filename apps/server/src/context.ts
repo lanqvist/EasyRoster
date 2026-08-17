@@ -35,6 +35,9 @@ export function createContext(log: Logger, opts: { dbPath?: string } = {}): AppC
   const items = new ItemsService(config, staticData, log);
   sync.afterCharacterSync = async () => {
     await items.ensureItems(sync.repo.allEquippedItemIds());
+    await items.localizeItems(sync.repo.allEquippedItemIds());
+    await items.localizeSeasonInstances();
+    await items.localizeItems(bis.repo.allCandidateItemIds());
     // автосим для тех, у кого сменилась экипировка / устарел сим
     const simCfg = config.get().sim;
     if (simCfg.enabled && simCfg.autoAfterSync) {

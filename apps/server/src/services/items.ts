@@ -72,6 +72,61 @@ export class ItemsService {
     return done;
   }
 
+  /** Русские названия инстансов и боссов сезона (Blizzard journal API, те же id, что у Raidbots). */
+  async localizeSeasonInstances(): Promise<number> {
+    const client = this.client();
+    if (!client || this.config.get().locale !== "ru_RU") return 0;
+    const season = this.config.get().season;
+    const ids = [...season.raidInstanceIds, ...season.dungeonInstanceIds];
+    const todo = this.staticData.instancesWithoutRu(ids);
+    let done = 0;
+    for (const t of todo) {
+      let nameRu: string | null = null;
+      try {
+        const r = await client.get<{ name?: string; encounters?: Array<{ id: number; name: string }> }>(`/data/wow/journal-instance/${t.id}`, "static");
+        nameRu = r.data?.name ?? null;
+        const encRu: Record<string, string> = {};
+        for (const e of r.data?.encounters ?? []) encRu[String(e.id)] = e.name;
+        // недостающие боссы — точечно
+        for (const eid of t.encounters) {
+          if (encRu[String(eid)]) continue;
+          try {
+            const er = await client.get<{ name?: string }>(`/data/wow/journal-encounter/${eid}`, "static");
+            if (er.data?.name) encRu[String(eid)] = er.data.name;
+          } catch { /* нет такого — пропускаем */ }
+        }
+        this.staticData.setInstanceRu(t.id, nameRu, encRu);
+        done++;
+      } catch (e) {
+        this.log.warn(`journal-instance ${t.id}: ${(e as Error).message}`);
+      }
+    }
+    if (done) this.log.info(`Локализовано инстансов: ${done}`);
+    return done;
+  }
+
+  /** Русские имена для произвольного набора предметов (кандидаты BiS вне лут-таблиц сезона, крафт и т.п.). */
+  async localizeItems(ids: number[]): Promise<number> {
+    const client = this.client();
+    if (!client || !this.config.get().locale.startsWith("ru")) return 0;
+    const need = this.staticData.itemsWithoutRu(ids);
+    if (need.length === 0) return 0;
+    const batch: Array<{ id: number; nameRu: string }> = [];
+    let idx = 0;
+    const worker = async () => {
+      while (idx < need.length) {
+        const id = need[idx++]!;
+        try {
+          const r = await client.get<BlizzardItem>(`/data/wow/item/${id}`, "static");
+          if (r.data?.name) batch.push({ id, nameRu: r.data.name });
+        } catch { /* ignore */ }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(6, need.length) }, worker));
+    this.staticData.setNamesRu(batch);
+    return batch.length;
+  }
+
   /** Гарантировать наличие предметов в справочнике (для экипировки персонажей). */
   async ensureItems(ids: number[]): Promise<number> {
     const missing = this.staticData.missingItemIds(ids);

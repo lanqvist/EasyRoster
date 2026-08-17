@@ -131,10 +131,11 @@ export interface ItemRow {
 
 export interface InstanceRow {
   id: number;
-  name: string;
+  name: string; // локализованное (ru при locale ru_RU)
+  nameEn?: string;
   type: string;
   order: number | null;
-  encounters: Array<{ id: number; name: string }>;
+  encounters: Array<{ id: number; name: string; nameEn?: string }>;
 }
 
 export interface StaticDataStatus {

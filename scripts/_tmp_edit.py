@@ -1,4 +1,3 @@
-import re
 def edit(p, pairs):
     s=open(p,encoding='utf8').read()
     for a,b in pairs:
@@ -6,153 +5,227 @@ def edit(p, pairs):
         s=s.replace(a,b,1)
     open(p,'w',encoding='utf8').write(s)
 
-# ---------- ItemLink everywhere
-edit('apps/web/src/components/BisSlotList.tsx',[
- ('''                    <td style={{ width: 26, padding: "3px 4px" }}>
-                      <img src={iconUrl(e.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
-                    </td>
-                    <td>
-                      <a href={wowheadUrl(e.itemId, e.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[e.quality ?? 4] }}>
-                        {(ru && e.itemNameRu) || e.itemName}
-                      </a>
-                      {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}''',
-  '''                    <td>
-                      <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} />
-                      {e.isTier && <span className="muted" style={{ fontSize: 11 }}> · тир</span>}'''),
- ('import { AltLine, SourceChips } from "./SourceChips";','import { AltLine, SourceChips } from "./SourceChips";\nimport { ItemLink } from "./ItemLink";'),
-])
-# equipped mini icons in slot header — leave.
+# ---------- 1. спеки RU
+edit('packages/core/src/wow.ts',[
+ ('export const SPEC_BY_ID: ReadonlyMap<number, SpecInfo> = new Map(SPECS.map((s) => [s.id, s]));',
+  '''export const SPEC_BY_ID: ReadonlyMap<number, SpecInfo> = new Map(SPECS.map((s) => [s.id, s]));
 
-edit('apps/web/src/components/CharacterDrawer.tsx',[
- ('''                          {it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ verticalAlign: "middle", marginRight: 6, borderRadius: 3 }} />}
-                          {it ? (
-                            <a
-                              href={`https://www.wowhead.com/ru/item=${it.itemId}${it.bonusIds.length ? `?bonus=${it.bonusIds.join(":")}` : ""}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ color: QUALITY_COLORS[it.quality ?? ""] ?? "inherit" }}
-                              title={it.setName ? `Комплект: ${it.setName}` : undefined}
-                            >
-                              {it.itemName ?? `#${it.itemId}`}
-                            </a>
-                          ) : (''',
-  '''                          {it ? (
-                            <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} size={18} />
-                          ) : ('''),
- ('''                    <td style={{ width: 24, padding: "2px 4px" }}>{it && <img src={iconUrl(it.icon, "small")} width={18} height={18} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />}</td>
-                    <td>
-                      <a href={wowheadUrl(r.itemId, r.bonusIds, ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[it?.quality ?? 4] }}>
-                        {(ru && it?.nameRu) || it?.name || `#${r.itemId}`}
-                      </a>''',
-  '''                    <td>
-                      <ItemLink itemId={r.itemId} name={(ru && it?.nameRu) || it?.name || `#${r.itemId}`} icon={it?.icon} quality={it?.quality} bonusIds={r.bonusIds} ru={ru} size={18} />'''),
- ('import { useConfig } from "../lib/config-context";','import { useConfig } from "../lib/config-context";\nimport { ItemLink } from "./ItemLink";\n\nconst QUALITY_NUM_BY_TYPE: Record<string, number> = { POOR: 0, COMMON: 1, UNCOMMON: 2, RARE: 3, EPIC: 4, LEGENDARY: 5, ARTIFACT: 6, HEIRLOOM: 7 };'),
- # width of drawer + link to full page
- ('        style={{ width: 560, maxWidth: "100%", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}',
-  '        style={{ width: "min(1100px, 95vw)", height: "100%", overflowY: "auto", background: "var(--bg-elev)", borderLeft: "1px solid var(--border)", padding: 20 }}'),
+/** Русские названия спек (как в игре). */
+export const SPEC_NAMES_RU: Record<number, string> = {
+  250: "Кровь", 251: "Лёд", 252: "Нечестивость",
+  577: "Истребление", 581: "Месть", 1480: "Пожиратель",
+  102: "Баланс", 103: "Сила зверя", 104: "Страж", 105: "Исцеление",
+  1467: "Опустошение", 1468: "Сохранение", 1473: "Насыщение",
+  253: "Повелитель зверей", 254: "Стрельба", 255: "Выживание",
+  62: "Тайная магия", 63: "Огонь", 64: "Лёд",
+  268: "Хмелевар", 270: "Ткач туманов", 269: "Танцующий с ветром",
+  65: "Свет", 66: "Защита", 70: "Воздаяние",
+  256: "Послушание", 257: "Свет", 258: "Тьма",
+  259: "Ликвидация", 260: "Головорез", 261: "Скрытность",
+  262: "Стихии", 263: "Совершенствование", 264: "Исцеление",
+  265: "Колдовство", 266: "Демонология", 267: "Разрушение",
+  71: "Оружие", 72: "Неистовство", 73: "Защита",
+};'''),
 ])
-# sim results table: header cell for icon removed → adjust thead: find "<th></th>\n                <th>Предмет</th>" in SimResults
-s=open('apps/web/src/components/CharacterDrawer.tsx',encoding='utf8').read()
-s=s.replace('''                <th></th>
-                <th>Предмет</th>
-                <th>Слот</th>
-                <th>Трек</th>''','''                <th>Предмет</th>
-                <th>Слот</th>
-                <th>Трек</th>''',1)
-open('apps/web/src/components/CharacterDrawer.tsx','w',encoding='utf8').write(s)
-
-edit('apps/web/src/pages/RaidNightPage.tsx',[
- ('''                    <td style={{ width: 26, padding: "3px 4px" }}>
-                      <img src={iconUrl(it.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} />
-                    </td>
-                    <td>
-                      <span style={{ color: QUALITY_COLORS_NUM[it.quality ?? 4] }}>{(ru && it.nameRu) || it.name}</span>''',
-  '''                    <td>
-                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} />'''),
- ('''                <img src={iconUrl(selectedItem.icon, "small")} width={20} height={20} alt="" style={{ borderRadius: 3, verticalAlign: "middle", marginRight: 6 }} />
-                <a href={wowheadUrl(selectedItem.id, [], ru ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[selectedItem.quality ?? 4] }}>
-                  {(ru && selectedItem.nameRu) || selectedItem.name}
-                </a>''',
-  '''                <ItemLink itemId={selectedItem.id} name={(ru && selectedItem.nameRu) || selectedItem.name} icon={selectedItem.icon} quality={selectedItem.quality} ru={ru} />'''),
- ('import { KIND_LABEL } from "../components/SourceChips";','import { KIND_LABEL } from "../components/SourceChips";\nimport { ItemLink } from "../components/ItemLink";'),
-])
-edit('apps/web/src/pages/LootPage.tsx',[
- ('''      <td style={{ width: 28, padding: "3px 6px" }}>
-        <img src={iconUrl(item.icon, "small")} width={22} height={22} alt="" style={{ borderRadius: 3, verticalAlign: "middle" }} loading="lazy" />
-      </td>
-      <td>
-        <a href={wowheadUrl(item.id, [], locale.startsWith("ru") ? "ru" : "en")} target="_blank" rel="noreferrer" style={{ color: QUALITY_COLORS_NUM[item.quality ?? 4] }}>
-          {name}
-        </a>''',
-  '''      <td>
-        <ItemLink itemId={item.id} name={name} icon={item.icon} quality={item.quality} ru={locale.startsWith("ru")} size={22} />'''),
- ('import { OBTAINED_STYLE } from "../components/BisSlotList";','import { OBTAINED_STYLE } from "../components/BisSlotList";\nimport { ItemLink } from "../components/ItemLink";'),
+edit('apps/web/src/lib/format.ts',[
+ ('  return SPEC_BY_ID.get(specId)?.name ?? `#${specId}`;\n}',
+  '  return SPEC_NAMES_RU[specId] ?? SPEC_BY_ID.get(specId)?.name ?? `#${specId}`;\n}'),
+ ('import { CLASS_COLORS, CLASS_IDS, CLASS_NAMES_RU, SPEC_BY_ID, type ClassId } from "@easyroster/core";',
+  'import { CLASS_COLORS, CLASS_IDS, CLASS_NAMES_RU, SPEC_BY_ID, SPEC_NAMES_RU, type ClassId } from "@easyroster/core";'),
 ])
 
-# ---------- BisSlotList: две колонки слотов на широком экране
-edit('apps/web/src/components/BisSlotList.tsx',[
- ('        <div key={s.slot} style={{ marginBottom: 10 }}>','        <div key={s.slot} style={{ marginBottom: 10, breakInside: "avoid" }}>'),
+# ---------- 2. инстансы/боссы RU: миграция + сервис
+s=open('apps/server/src/services/db.ts',encoding='utf8').read()
+idx=s.rfind('  `,\n];')
+s=s[:idx]+'''  `,
+  // v9 — русские названия инстансов и боссов
+  `
+  ALTER TABLE instances ADD COLUMN name_ru TEXT;
+  ALTER TABLE instances ADD COLUMN encounters_ru TEXT;   -- JSON {encounterId: nameRu}
+  `,
+];'''+s[idx+len('  `,\n];'):]
+open('apps/server/src/services/db.ts','w',encoding='utf8').write(s)
+
+edit('apps/server/src/services/static-data.ts',[
+ ('  instance(id: number): InstanceRow | undefined {\n    const r = this.db.conn.prepare("SELECT * FROM instances WHERE id = ?").get(id) as any;\n    return r ? { id: r.id, name: r.name, type: r.type, order: r.sort_order, encounters: JSON.parse(r.encounters) } : undefined;\n  }',
+  '''  /** Показывать русские названия (locale ru_RU) — применяется ко всем выдачам инстансов/боссов. */
+  private get ru(): boolean {
+    return this.config.get().locale === "ru_RU";
+  }
+
+  private mapInstance(r: any): InstanceRow {
+    const encs = JSON.parse(r.encounters) as Array<{ id: number; name: string }>;
+    const encRu: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+    const ru = this.ru;
+    return {
+      id: r.id,
+      name: ru && r.name_ru ? r.name_ru : r.name,
+      nameEn: r.name,
+      type: r.type,
+      order: r.sort_order,
+      encounters: encs.map((e) => ({ id: e.id, name: ru && encRu[String(e.id)] ? encRu[String(e.id)]! : e.name, nameEn: e.name })),
+    };
+  }
+
+  instance(id: number): InstanceRow | undefined {
+    const r = this.db.conn.prepare("SELECT * FROM instances WHERE id = ?").get(id) as any;
+    return r ? this.mapInstance(r) : undefined;
+  }
+
+  /** Инстансы без русских названий (для локализации через Blizzard). */
+  instancesWithoutRu(ids: number[]): Array<{ id: number; encounters: number[] }> {
+    const out: Array<{ id: number; encounters: number[] }> = [];
+    for (const id of ids) {
+      const r = this.db.conn.prepare("SELECT id, name_ru, encounters, encounters_ru FROM instances WHERE id = ?").get(id) as any;
+      if (!r) continue;
+      const encs = (JSON.parse(r.encounters) as Array<{ id: number }>).map((e) => e.id).filter((e) => e > 0);
+      const have: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+      const missing = encs.filter((e) => !have[String(e)]);
+      if (!r.name_ru || missing.length) out.push({ id, encounters: missing });
+    }
+    return out;
+  }
+
+  setInstanceRu(id: number, nameRu: string | null, encountersRu: Record<string, string>): void {
+    const r = this.db.conn.prepare("SELECT encounters_ru FROM instances WHERE id = ?").get(id) as any;
+    const merged = { ...(r?.encounters_ru ? JSON.parse(r.encounters_ru) : {}), ...encountersRu };
+    this.db.conn.prepare("UPDATE instances SET name_ru = COALESCE(?, name_ru), encounters_ru = ? WHERE id = ?").run(nameRu, JSON.stringify(merged), id);
+  }'''),
+ ('''    return (this.db.conn.prepare("SELECT * FROM instances ORDER BY sort_order, id").all() as any[]).map((r) => ({
+      id: r.id, name: r.name, type: r.type, order: r.sort_order, encounters: JSON.parse(r.encounters),
+    }));''','''    return (this.db.conn.prepare("SELECT * FROM instances ORDER BY sort_order, id").all() as any[]).map((r) => this.mapInstance(r));'''),
+ ('''      .prepare("SELECT s.instance_id, s.encounter_id, i.name AS iname, i.encounters FROM item_sources s LEFT JOIN instances i ON i.id = s.instance_id WHERE s.item_id = ?")
+      .all(itemId) as any[];
+    return rows.map((r) => {
+      const encs = r.encounters ? (JSON.parse(r.encounters) as Array<{ id: number; name: string }>) : [];
+      return {
+        instanceId: r.instance_id,
+        encounterId: r.encounter_id,
+        instanceName: r.iname ?? `#${r.instance_id}`,
+        encounterName: encs.find((e) => e.id === r.encounter_id)?.name ?? `#${r.encounter_id}`,
+      };
+    });''','''      .prepare("SELECT s.instance_id, s.encounter_id, i.name AS iname, i.name_ru AS iname_ru, i.encounters, i.encounters_ru FROM item_sources s LEFT JOIN instances i ON i.id = s.instance_id WHERE s.item_id = ?")
+      .all(itemId) as any[];
+    const ru = this.ru;
+    return rows.map((r) => {
+      const encs = r.encounters ? (JSON.parse(r.encounters) as Array<{ id: number; name: string }>) : [];
+      const encRu: Record<string, string> = r.encounters_ru ? JSON.parse(r.encounters_ru) : {};
+      const encEn = encs.find((e) => e.id === r.encounter_id)?.name;
+      // для M+ группы (-1) encounterId = id подземелья → берём его русское имя из таблицы инстансов
+      let encName = ru && encRu[String(r.encounter_id)] ? encRu[String(r.encounter_id)]! : encEn;
+      if (!encName || (ru && !encRu[String(r.encounter_id)] && r.encounter_id > 0 && r.instance_id < 0)) {
+        const inner = this.db.conn.prepare("SELECT name, name_ru FROM instances WHERE id = ?").get(r.encounter_id) as any;
+        if (inner) encName = ru && inner.name_ru ? inner.name_ru : (encName ?? inner.name);
+      }
+      return {
+        instanceId: r.instance_id,
+        encounterId: r.encounter_id,
+        instanceName: (ru && r.iname_ru) || r.iname || `#${r.instance_id}`,
+        encounterName: encName ?? `#${r.encounter_id}`,
+      };
+    });'''),
 ])
-s=open('apps/web/src/components/BisSlotList.tsx',encoding='utf8').read()
-# оборачивающий контейнер: найдём return ( <div> {view.slots.map
-s=s.replace('''  return (
-    <div>
-      {view.slots.map((s) => (''','''  return (
-    <div className="bis-slot-grid">
-      {view.slots.map((s) => (''',1)
-open('apps/web/src/components/BisSlotList.tsx','w',encoding='utf8').write(s)
-css=open('apps/web/src/styles.css',encoding='utf8').read()
-css+='''
-/* BiS-лист: две колонки на широких экранах */
-.bis-slot-grid { display: grid; grid-template-columns: 1fr; gap: 0 18px; }
-@media (min-width: 1000px) { .bis-slot-grid { grid-template-columns: 1fr 1fr; } }
-.item-link:hover { text-decoration: underline; }
-/* тултип Wowhead поверх выезжающей карточки */
-.wowhead-tooltip { z-index: 10000 !important; }
-'''
-open('apps/web/src/styles.css','w',encoding='utf8').write(css)
-
-# ---------- Settings tabs
-edit('apps/web/src/pages/SettingsPage.tsx',[
- ('  return (\n    <div>\n      <h1>Настройки</h1>\n      {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}\n',
-  '''  const TABS: Array<[string, string]> = [["guild", "Гильдия и ранги"], ["keys", "Ключи API"], ["sim", "Автосим"], ["local", "Синхронизация"], ["wow", "Интеграция с WoW"]];
-  const show = (t: string): React.CSSProperties | undefined => (tab === t ? undefined : { display: "none" });
-  return (
-    <div>
-      <h1>Настройки</h1>
-      <div className="row" style={{ marginBottom: 14, gap: 6 }}>
-        {TABS.map(([k, label]) => (
-          <button key={k} className={tab === k ? "primary" : undefined} onClick={() => setTab(k)}>{label}</button>
-        ))}
-      </div>
-      {msg && <div className={`alert ${msg.ok ? "ok" : "bad"}`}>{msg.text}</div>}
-'''),
+edit('packages/core/src/api.ts',[
+ ('export interface InstanceRow {\n  id: number;\n  name: string;\n  type: string;\n  order: number | null;\n  encounters: Array<{ id: number; name: string }>;\n}',
+  'export interface InstanceRow {\n  id: number;\n  name: string; // локализованное (ru при locale ru_RU)\n  nameEn?: string;\n  type: string;\n  order: number | null;\n  encounters: Array<{ id: number; name: string; nameEn?: string }>;\n}'),
 ])
-s=open('apps/web/src/pages/SettingsPage.tsx',encoding='utf8').read()
-s=s.replace('  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);','  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);\n  const [tab, setTab] = useState<string>(() => localStorage.getItem("easyroster.settingsTab") ?? "guild");\n  useEffect(() => localStorage.setItem("easyroster.settingsTab", tab), [tab]);',1)
-if 'useEffect' not in s.split('\n')[0]:
-    s=s.replace('import { useState } from "react";','import { useEffect, useState } from "react";',1)
-# привязка карточек к вкладкам по заголовкам
-def tag(s, h2, t):
-    i=s.index('<h2>'+h2+'</h2>')
-    j=s.rfind('<div className="card">',0,i)
-    return s[:j]+'<div className="card" style={show("'+t+'")}>'+s[j+len('<div className="card">'):]
-for h2,t in [('Гильдия','guild'),('Ранги рейдеров','guild'),('Ключи API','keys'),('Автосим SimulationCraft','sim'),('Локально','local')]:
-    s=tag(s,h2,t)
-s=s.replace('''      <button className="primary" disabled={busy} onClick={submit}>
-        {busy ? "Сохраняю…" : "Сохранить"}
-      </button>
 
-      <div style={{ marginTop: 24 }}>
-        <WowIntegrationCard />
-      </div>''','''      {tab !== "wow" && (
-        <button className="primary" disabled={busy} onClick={submit}>
-          {busy ? "Сохраняю…" : "Сохранить"}
-        </button>
-      )}
+# ---------- ItemsService: локализация инстансов/боссов + произвольных предметов
+edit('apps/server/src/services/items.ts',[
+ ('  /** Гарантировать наличие предметов в справочнике (для экипировки персонажей). */',
+  '''  /** Русские названия инстансов и боссов сезона (Blizzard journal API, те же id, что у Raidbots). */
+  async localizeSeasonInstances(): Promise<number> {
+    const client = this.client();
+    if (!client || this.config.get().locale !== "ru_RU") return 0;
+    const season = this.config.get().season;
+    const ids = [...season.raidInstanceIds, ...season.dungeonInstanceIds];
+    const todo = this.staticData.instancesWithoutRu(ids);
+    let done = 0;
+    for (const t of todo) {
+      let nameRu: string | null = null;
+      try {
+        const r = await client.get<{ name?: string; encounters?: Array<{ id: number; name: string }> }>(`/data/wow/journal-instance/${t.id}`, "static");
+        nameRu = r.data?.name ?? null;
+        const encRu: Record<string, string> = {};
+        for (const e of r.data?.encounters ?? []) encRu[String(e.id)] = e.name;
+        // недостающие боссы — точечно
+        for (const eid of t.encounters) {
+          if (encRu[String(eid)]) continue;
+          try {
+            const er = await client.get<{ name?: string }>(`/data/wow/journal-encounter/${eid}`, "static");
+            if (er.data?.name) encRu[String(eid)] = er.data.name;
+          } catch { /* нет такого — пропускаем */ }
+        }
+        this.staticData.setInstanceRu(t.id, nameRu, encRu);
+        done++;
+      } catch (e) {
+        this.log.warn(`journal-instance ${t.id}: ${(e as Error).message}`);
+      }
+    }
+    if (done) this.log.info(`Локализовано инстансов: ${done}`);
+    return done;
+  }
 
-      <div style={show("wow")}>
-        <WowIntegrationCard />
-      </div>''')
-open('apps/web/src/pages/SettingsPage.tsx','w',encoding='utf8').write(s)
+  /** Русские имена для произвольного набора предметов (кандидаты BiS вне лут-таблиц сезона, крафт и т.п.). */
+  async localizeItems(ids: number[]): Promise<number> {
+    const client = this.client();
+    if (!client || !this.config.get().locale.startsWith("ru")) return 0;
+    const need = this.staticData.itemsWithoutRu(ids);
+    if (need.length === 0) return 0;
+    const batch: Array<{ id: number; nameRu: string }> = [];
+    let idx = 0;
+    const worker = async () => {
+      while (idx < need.length) {
+        const id = need[idx++]!;
+        try {
+          const r = await client.get<BlizzardItem>(`/data/wow/item/${id}`, "static");
+          if (r.data?.name) batch.push({ id, nameRu: r.data.name });
+        } catch { /* ignore */ }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(6, need.length) }, worker));
+    this.staticData.setNamesRu(batch);
+    return batch.length;
+  }
+
+  /** Гарантировать наличие предметов в справочнике (для экипировки персонажей). */'''),
+])
+edit('apps/server/src/services/static-data.ts',[
+ ('  missingItemIds(ids: number[]): number[] {',
+  '''  /** Из набора id — те, что есть в справочнике, но без name_ru. */
+  itemsWithoutRu(ids: number[]): number[] {
+    const q = this.db.conn.prepare("SELECT name_ru FROM items WHERE id = ?");
+    return [...new Set(ids)].filter((id) => {
+      const r = q.get(id) as any;
+      return r && !r.name_ru;
+    });
+  }
+
+  missingItemIds(ids: number[]): number[] {'''),
+])
+
+# ---------- контекст: вызывать локализацию после статики/синка/IcyVeins
+edit('apps/server/src/context.ts',[
+ ('  sync.afterCharacterSync = async () => {\n    await items.ensureItems(sync.repo.allEquippedItemIds());',
+  '''  sync.afterCharacterSync = async () => {
+    await items.ensureItems(sync.repo.allEquippedItemIds());
+    await items.localizeItems(sync.repo.allEquippedItemIds());
+    await items.localizeSeasonInstances();
+    await items.localizeItems(bis.repo.allCandidateItemIds());'''),
+])
+edit('apps/server/src/services/bis/repo.ts',[
+ ('  candidatesForSpec(specId: number, characterId: number | null): BisCandidateRow[] {',
+  '''  allCandidateItemIds(): number[] {
+    return (this.db.conn.prepare("SELECT DISTINCT item_id FROM bis_candidates").all() as Array<{ item_id: number }>).map((r) => r.item_id);
+  }
+
+  candidatesForSpec(specId: number, characterId: number | null): BisCandidateRow[] {'''),
+])
+edit('apps/server/src/index.ts',[
+ ('      .then(() => ctx.items.localizeSeasonItems())','      .then(() => ctx.items.localizeSeasonItems())\n      .then(() => ctx.items.localizeSeasonInstances())'),
+])
+# роут refresh статики тоже
+edit('apps/server/src/routes/loot.ts',[
+ ('      void ctx.items.localizeSeasonItems().catch(() => undefined);','      void ctx.items.localizeSeasonItems().then(() => ctx.items.localizeSeasonInstances()).catch(() => undefined);'),
+])
 print("ok")

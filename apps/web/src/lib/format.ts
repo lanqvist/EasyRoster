@@ -1,4 +1,4 @@
-import { CLASS_COLORS, CLASS_IDS, CLASS_NAMES_RU, SPEC_BY_ID, type ClassId } from "@easyroster/core";
+import { CLASS_COLORS, CLASS_IDS, CLASS_NAMES_RU, SPEC_BY_ID, SPEC_NAMES_RU, type ClassId } from "@easyroster/core";
 
 export function classFile(classId: number) {
   return CLASS_IDS[classId as ClassId];
@@ -23,7 +23,7 @@ export function className(classId: number): string {
 }
 export function specName(specId: number | null): string {
   if (!specId) return "—";
-  return SPEC_BY_ID.get(specId)?.name ?? `#${specId}`;
+  return SPEC_NAMES_RU[specId] ?? SPEC_BY_ID.get(specId)?.name ?? `#${specId}`;
 }
 export function roleOf(specId: number | null): "TANK" | "HEALER" | "DAMAGER" | null {
   if (!specId) return null;
@@ -61,4 +61,12 @@ export const QUALITY_COLORS: Record<string, string> = {
 
 export const QUALITY_COLORS_NUM: Record<number, string> = {
   0: "#9d9d9d", 1: "#ffffff", 2: "#1eff00", 3: "#0070dd", 4: "#a335ee", 5: "#ff8000", 6: "#e6cc80", 7: "#00ccff",
+};
+
+export const FIGHT_STYLE_RU: Record<string, string> = {
+  Patchwerk: "Одна цель (Patchwerk)",
+  HecticAddCleave: "Босс + адды (HecticAddCleave)",
+  DungeonSlice: "Подземелье (DungeonSlice)",
+  LightMovement: "Лёгкое движение (LightMovement)",
+  HeavyMovement: "Много движения (HeavyMovement)",
 };

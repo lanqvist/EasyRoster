@@ -229,6 +229,11 @@ const MIGRATIONS: string[] = [
   ALTER TABLE characters ADD COLUMN raid_spec_id INTEGER;
   ALTER TABLE characters ADD COLUMN talents_override TEXT;
   `,
+  // v9 — русские названия инстансов и боссов
+  `
+  ALTER TABLE instances ADD COLUMN name_ru TEXT;
+  ALTER TABLE instances ADD COLUMN encounters_ru TEXT;   -- JSON {encounterId: nameRu}
+  `,
 ];
 
 export class Db {

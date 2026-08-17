@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
+import { TRACK_NAMES_RU, SLOT_NAMES_RU, iconUrl, wowheadUrl, type InstanceRow, type ItemRow, type ItemWanter, type LootHistoryRow, type LootInstanceView, type StaticDataStatus } from "@easyroster/core";
 import { api } from "../lib/api";
 import { DifficultySwitch, useDifficulty } from "../lib/difficulty";
 import { KIND_LABEL } from "../components/SourceChips";
@@ -179,7 +179,7 @@ export function RaidNightPage() {
                           <td style={{ color: st.color }} title={w.obtainedDetail ?? ""}>{st.label}{w.obtainedDetail ? ` · ${w.obtainedDetail}` : ""}</td>
                           <td className="num" style={{ color: w.upgradePct != null && w.upgradePct > 0 ? "var(--ok)" : undefined }}>
                             {w.upgradePct != null ? `${w.upgradePct > 0 ? "+" : ""}${w.upgradePct.toFixed(1)}%` : w.equippedIlvl ? `надето ${w.equippedIlvl}` : "—"}
-                            {w.simTrack && <span className="muted" style={{ fontSize: 11 }}> {w.simTrack}</span>}
+                            {w.simTrack && <span className="muted" style={{ fontSize: 11 }}> {TRACK_NAMES_RU[w.simTrack] ?? w.simTrack}</span>}
                           </td>
                           <td className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }} title={(() => { const a = w.alt?.farmable ?? w.alt?.best; return a ? `${a.name} (${KIND_LABEL[a.kind]}${a.sourceName ? ` · ${a.sourceName}` : ""})` : ""; })()}>
                             {(() => {

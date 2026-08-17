@@ -1,7 +1,7 @@
 {
   "name": "easyroster",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Локальный менеджер ростера рейдового статика WoW: синк персонажей, BiS-листы, интеграция с RCLootCouncil",
   "workspaces": [
     "packages/*",

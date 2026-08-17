@@ -1,4 +1,4 @@
-import { SLOT_NAMES_RU, iconUrl, wowheadUrl, type BisCharacterView, type BisEntry, type ObtainedStatus } from "@easyroster/core";
+import { TRACK_NAMES_RU, SLOT_NAMES_RU, iconUrl, wowheadUrl, type BisCharacterView, type BisEntry, type ObtainedStatus } from "@easyroster/core";
 import { QUALITY_COLORS_NUM } from "../lib/format";
 import { AltLine, SourceChips } from "./SourceChips";
 import { ItemLink } from "./ItemLink";
@@ -17,7 +17,7 @@ export function SimBadge({ sources }: { sources: BisEntry["sources"] }) {
   const parts = sims
     .map((x) => {
       const m = x.meta as { track?: string; delta?: number; dtpsPct?: number | null; role?: string } | null | undefined;
-      const track = m?.track ? ` ${m.track}` : "";
+      const track = m?.track ? ` ${TRACK_NAMES_RU[m.track] ?? m.track}` : "";
       const dt = m?.role === "tank" && typeof m.dtpsPct === "number" ? ` (урон ${m.dtpsPct > 0 ? "+" : ""}${m.dtpsPct.toFixed(1)}%)` : "";
       return { pct: x.score!, text: `${x.score! > 0 ? "+" : ""}${x.score!.toFixed(1)}%${track}${dt}`, tip: m?.delta != null ? `Δ ${Math.round(m.delta)} dps` : "" };
     })

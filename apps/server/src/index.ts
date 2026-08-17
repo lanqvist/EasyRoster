@@ -11,7 +11,7 @@ import { bisRoutes } from "./routes/bis.js";
 import { wowRoutes } from "./routes/wow.js";
 import { DB_PATH, WEB_DIST } from "./paths.js";
 
-const VERSION = "0.4.2";
+const VERSION = "0.4.3";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } });
@@ -41,6 +41,7 @@ async function main(): Promise<void> {
     void ctx.staticData
       .refresh()
       .then(() => ctx.items.localizeSeasonItems())
+      .then(() => ctx.items.localizeSeasonInstances())
       .catch((e) => app.log.warn(`Raidbots static: ${(e as Error).message}`));
   }
 

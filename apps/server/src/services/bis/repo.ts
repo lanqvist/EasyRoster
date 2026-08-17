@@ -35,6 +35,10 @@ export class BisRepo {
     }
   }
 
+  allCandidateItemIds(): number[] {
+    return (this.db.conn.prepare("SELECT DISTINCT item_id FROM bis_candidates").all() as Array<{ item_id: number }>).map((r) => r.item_id);
+  }
+
   candidatesForSpec(specId: number, characterId: number | null): BisCandidateRow[] {
     const rows = this.db.conn
       .prepare("SELECT * FROM bis_candidates WHERE spec_id = ? AND (character_id IS NULL OR character_id = ?) ORDER BY source, list, slot, rank")
