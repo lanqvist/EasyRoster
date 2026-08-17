@@ -67,7 +67,7 @@ code, .mono { font-family: var(--mono); font-size: 12.5px; }
 .nav a.active { background: var(--bg-elev-2); color: var(--accent); }
 .sidebar .foot { margin-top: auto; font-size: 12px; color: var(--text-muted); padding: 0 8px; }
 .main { padding: 26px 32px; max-width: 1680px; min-width: 0; }
-.card { min-width: 0; overflow: hidden; }
+.card { min-width: 0; overflow-x: auto; }
 
 /* cards & forms */
 .card {
@@ -140,3 +140,24 @@ tr.selected td { background: rgba(217,164,65,.08); }
 /* мини-карточка слота (Лут-ночь) */
 .sf-title { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 2px; }
 .sf-row { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(90px, 0.7fr) 84px 52px 40px; gap: 0 6px; align-items: center; padding: 2px 4px; }
+
+/* Распределение лута: крупнее и просторнее */
+.loot-page { font-size: 14px; }
+.loot-page table { font-size: 14px; }
+.loot-page th, .loot-page td { padding: 8px 10px; }
+.loot-page .card { padding: 12px 16px; }
+.loot-page h2 { font-size: 16px; }
+.loot-page .sf-row { grid-template-columns: 16px minmax(0, 1fr) minmax(110px, 0.7fr) 100px 64px 48px; padding: 4px 6px; }
+.loot-page .sf-title { font-size: 12px; margin: 4px 0; }
+table.zebra tbody tr:nth-child(even) td { background: rgba(127,127,127,.04); }
+table.zebra tbody tr:hover td { background: rgba(217,164,65,.08); }
+table.zebra tbody tr.selected td { background: rgba(217,164,65,.16); }
+
+.loot-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 14px; }
+.loot-grid.with-focus { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+.loot-grid.with-focus .loot-focus { grid-column: 1 / -1; }
+@media (min-width: 1600px) {
+  .loot-grid.with-focus { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr); }
+  .loot-grid.with-focus .loot-focus { grid-column: auto; position: sticky; top: 8px; }
+}
+.loot-page .sf-row { grid-template-columns: 16px minmax(160px, 1fr) minmax(90px, 0.6fr) 96px 64px 48px; }

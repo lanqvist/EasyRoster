@@ -83,7 +83,7 @@ export function RaidNightPage() {
   const sel = selectedItem ? wanters[selectedItem.id] ?? [] : [];
 
   return (
-    <div>
+    <div className="loot-page">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div>
           <h1 style={{ marginBottom: 0 }}>Распределение лута</h1>
@@ -115,18 +115,18 @@ export function RaidNightPage() {
         </label>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: focus ? "minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr)" : "minmax(0, 1fr) minmax(0, 1.4fr)", gap: 14 }}>
+      <div className={`loot-grid${focus ? " with-focus" : ""}`}>
         <div className="card" style={{ padding: "8px 12px" }}>
-          <h2 style={{ fontSize: 14 }}>{enc?.name ?? "—"}</h2>
-          <table>
+          <h2 style={{ fontSize: 16 }}>{enc?.name ?? "—"}</h2>
+          <table className="zebra">
             <tbody>
               {items.map(({ it, w }) => {
                 const need = w.filter((x) => x.obtained !== "yes");
                 return (
                   <tr key={it.id} className={selectedItem?.id === it.id ? "selected" : undefined} style={{ cursor: "pointer" }} onClick={() => setSelectedItem(it)}>
                     <td>
-                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} />
-                      <div className="muted" style={{ fontSize: 11 }}>{it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}</div>
+                      <ItemLink itemId={it.id} name={(ru && it.nameRu) || it.name} icon={it.icon} quality={it.quality} ru={ru} size={28} style={{ fontSize: 14 }} />
+                      <div className="muted" style={{ fontSize: 12, marginLeft: 34 }}>{it.slot ? SLOT_NAMES_RU[it.slot] : it.contains ? "тир-токен" : ""}</div>
                     </td>
                     <td className="num" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                       <span style={{ color: need.length ? "var(--bad)" : "var(--text-muted)" }}>{need.length}</span>
@@ -148,12 +148,12 @@ export function RaidNightPage() {
           {selectedItem ? (
             <>
               <h2 style={{ fontSize: 14 }}>
-                <ItemLink itemId={selectedItem.id} name={(ru && selectedItem.nameRu) || selectedItem.name} icon={selectedItem.icon} quality={selectedItem.quality} ru={ru} />
+                <ItemLink itemId={selectedItem.id} name={(ru && selectedItem.nameRu) || selectedItem.name} icon={selectedItem.icon} quality={selectedItem.quality} ru={ru} size={30} style={{ fontSize: 17 }} />
               </h2>
               {sel.length === 0 ? (
                 <div className="muted">Никому из ростера не в BiS.</div>
               ) : (
-                <table>
+                <table className="zebra">
                   <thead>
                     <tr>
                       <th>Кому</th>
@@ -185,6 +185,7 @@ export function RaidNightPage() {
                             {(() => {
                               const a = w.alt?.farmable ?? w.alt?.best;
                               if (!a) return "—";
+                              if (w.upgradePct == null) return `${KIND_LABEL[a.kind]} · #${w.rank}`;
                               return `${a.pct > 0 ? "+" : ""}${a.pct.toFixed(1)}% ${KIND_LABEL[a.kind]}`;
                             })()}
                           </td>
@@ -203,7 +204,7 @@ export function RaidNightPage() {
           )}
         </div>
         {focus && (
-          <div className="card" style={{ padding: "8px 12px", position: "sticky", top: 8, alignSelf: "start", maxHeight: "calc(100vh - 16px)", overflowY: "auto" }}>
+          <div className="card loot-focus" style={{ padding: "8px 12px", alignSelf: "start", maxHeight: "calc(100vh - 16px)", overflowY: "auto" }}>
             <div className="row" style={{ justifyContent: "flex-end" }}>
               <button style={{ padding: "0 6px", fontSize: 11 }} onClick={() => setFocus(null)}>✕</button>
             </div>

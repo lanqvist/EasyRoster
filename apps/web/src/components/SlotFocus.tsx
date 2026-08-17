@@ -35,14 +35,14 @@ function Row({ e, ru, highlight, index }: { e: BisEntry; ru: boolean; highlight?
   const st = OBTAINED_STYLE[e.obtained];
   return (
     <div className="sf-row" style={highlight ? { background: "rgba(217,164,65,.14)", borderRadius: 4 } : undefined}>
-      <div className="muted num" style={{ fontSize: 11 }}>{index != null ? index : ""}</div>
+      <div className="muted num" style={{ fontSize: 12 }}>{index != null ? index : ""}</div>
       <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} size={16} style={{ fontSize: 12, maxWidth: "100%" }} />
+        <ItemLink itemId={e.itemId} name={(ru && e.itemNameRu) || e.itemName} icon={e.icon} quality={e.quality} bonusIds={e.bonusIds} ru={ru} size={24} style={{ fontSize: 14, maxWidth: "100%" }} />
         {e.isTier && <span className="muted" style={{ fontSize: 10 }}> тир</span>}
       </div>
-      <div className="muted" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={shortSource(e)}>{shortSource(e)}</div>
-      <div className="muted num" style={{ fontSize: 11, whiteSpace: "nowrap" }}>{dt ? `${TRACK_NAMES_RU[dt.name] ?? dt.name} ${dt.ilvl ?? ""}` : ""}</div>
-      <div className="num" style={{ fontSize: 12, fontWeight: 600, textAlign: "right", color: pctColor(e.simSelected?.pct) }} title={e.simByTrack ? Object.entries(e.simByTrack).map(([t, v]) => `${TRACK_NAMES_RU[t] ?? t}: ${pctText(v)}`).join("\n") : ""}>
+      <div className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={shortSource(e)}>{shortSource(e)}</div>
+      <div className="muted num" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{dt ? `${TRACK_NAMES_RU[dt.name] ?? dt.name} ${dt.ilvl ?? ""}` : ""}</div>
+      <div className="num" style={{ fontSize: 14, fontWeight: 600, textAlign: "right", color: pctColor(e.simSelected?.pct) }} title={e.simByTrack ? Object.entries(e.simByTrack).map(([t, v]) => `${TRACK_NAMES_RU[t] ?? t}: ${pctText(v)}`).join("\n") : ""}>
         {e.simSelected ? pctText(e.simSelected.pct) : <span className="muted" style={{ fontWeight: 400 }}>{e.score}</span>}
       </div>
       <div style={{ fontSize: 10, color: st.color, whiteSpace: "nowrap" }} title={e.obtainedDetail ?? ""}>{e.obtained === "no" ? "" : st.label}</div>
@@ -92,10 +92,10 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
   const alt = dropped?.alternatives?.farmable ?? null;
 
   return (
-    <div style={{ fontSize: 12 }}>
+    <div className="slot-focus" style={{ fontSize: 14 }}>
       <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
         <div style={{ minWidth: 0 }}>
-          <span style={{ color: classColor(c.classId), fontWeight: 600, fontSize: 13 }}>{c.name}</span>
+          <span style={{ color: classColor(c.classId), fontWeight: 600, fontSize: 16 }}>{c.name}</span>
           <span className="muted"> · {specName(c.activeSpecId)} · ilvl {c.ilvlEquipped?.toFixed(0) ?? "—"}{bis ? ` · BiS ${bis.coverage.pct}%` : ""}</span>
         </div>
         <Link to={`/character/${c.id}`} className="muted" style={{ fontSize: 11, whiteSpace: "nowrap" }}>карточка ↗</Link>
@@ -107,7 +107,7 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
         <div key={it.slot} className="sf-row">
           <div />
           <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} ru={ru} size={16} style={{ fontSize: 12 }} />
+            <ItemLink itemId={it.itemId} name={it.itemName ?? `#${it.itemId}`} icon={it.icon} quality={QUALITY_NUM_BY_TYPE[it.quality ?? ""] ?? 4} bonusIds={it.bonusIds} ru={ru} size={24} style={{ fontSize: 14 }} />
           </div>
           <div />
           <div className="muted num" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={it.trackName ?? ""}>{it.track ? `${TRACK_NAMES_RU[it.track.name] ?? it.track.name} ${it.track.level}/${it.track.max}` : shortTrackName(it.trackName)}</div>
@@ -130,7 +130,7 @@ export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characte
               <div className="sf-row">
                 <div />
                 <div style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={16} style={{ fontSize: 12 }} />
+                  <ItemLink itemId={alt.itemId} name={alt.name} icon={alt.icon ?? null} quality={alt.quality} bonusIds={alt.bonusIds ?? []} ru={ru} size={24} style={{ fontSize: 14 }} />
                 </div>
                 <div className="muted" style={{ fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${KIND_LABEL[alt.kind]}${alt.sourceName ? ` · ${alt.sourceName}` : ""}`}>{KIND_LABEL[alt.kind]}{alt.sourceName ? ` · ${alt.sourceName}` : ""}</div>
                 <div />
