@@ -109,7 +109,7 @@ export function LootPage() {
   return (
     <div>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Лут — {seasonLabel}</h1>
+        <h1>Лут-таблицы — {seasonLabel}</h1>
         <DifficultySwitch />
       </div>
       <div className="card" style={{ padding: "10px 16px" }}>

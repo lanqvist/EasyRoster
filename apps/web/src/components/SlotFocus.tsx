@@ -43,7 +43,7 @@ function Row({ e, ru, highlight, index }: { e: BisEntry; ru: boolean; highlight?
   );
 }
 
-/** Мини-карточка «персонаж × слот» для Лут-ночи: надето → выпало (вердикт) → что лучше. */
+/** Мини-карточка «персонаж × слот» для Распределения лута: надето → выпало (вердикт) → что лучше. */
 export function SlotFocus({ characterId, slot, highlightItemId, ru }: { characterId: number; slot: string; highlightItemId?: number; ru: boolean }) {
   const { difficulty } = useDifficulty();
   const [detail, setDetail] = useState<CharacterDetail | null>(null);

@@ -85,7 +85,10 @@ export function RaidNightPage() {
   return (
     <div>
       <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Лут-ночь</h1>
+        <div>
+          <h1 style={{ marginBottom: 0 }}>Распределение лута</h1>
+          <div className="muted" style={{ fontSize: 12 }}>босс → предмет → кому он нужнее и почему (то же, что совет видит в колонке BiS RCLootCouncil)</div>
+        </div>
         <DifficultySwitch />
       </div>
       <WowIntegrationCard compact />

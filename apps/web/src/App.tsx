@@ -79,8 +79,8 @@ function Shell() {
         <nav className="nav">
           <NavLink to="/roster">Ростер</NavLink>
           <NavLink to="/bis">BiS</NavLink>
-          <NavLink to="/loot">Лут</NavLink>
-          <NavLink to="/raid-night">Лут-ночь</NavLink>
+          <NavLink to="/loot">Лут-таблицы</NavLink>
+          <NavLink to="/raid-night">Распределение</NavLink>
           <NavLink to="/tier">Тир-сет</NavLink>
           <NavLink to="/settings">Настройки</NavLink>
         </nav>
