@@ -30,7 +30,7 @@ const SORTERS: Record<SortMode, (a: ItemWanter, b: ItemWanter) => number> = {
  * Лут-ночь: выбираем рейд → босса → предмет; справа — кому и насколько это нужно
  * (тот же расчёт, что видит совет в RCLootCouncil через колонку BiS). Ниже — свежая история лута RCLC.
  */
-export function RaidNightPage() {
+export function LootNight() {
   const { difficulty } = useDifficulty();
   const { config } = useConfig();
   const [instances, setInstances] = useState<{ season: StaticDataStatus["season"]; all: InstanceRow[] } | null>(null);
@@ -105,10 +105,7 @@ export function RaidNightPage() {
 
   return (
     <div className="loot-page">
-      <div>
-        <h1 style={{ marginBottom: 0 }}>Распределение лута</h1>
-        <div className="muted" style={{ fontSize: 12 }}>босс → предмет → кому он нужнее и почему (то же, что совет видит в колонке BiS RCLootCouncil) · сложность — {RAID_DIFFICULTY_LABEL[difficulty]} (переключатель в меню слева)</div>
-      </div>
+      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>босс → предмет → кому он нужнее и почему (то же, что совет видит в колонке BiS RCLootCouncil) · сложность — {RAID_DIFFICULTY_LABEL[difficulty]} (переключатель в меню слева)</div>
       <WowIntegrationCard compact />
       {err && <div className="alert bad">{err}</div>}
 

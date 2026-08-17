@@ -5,9 +5,8 @@ import { ConfigProvider, useConfig } from "./lib/config-context";
 import { DifficultyProvider, DifficultySwitch } from "./lib/difficulty";
 import { SetupPage } from "./pages/SetupPage";
 import { RosterPage } from "./pages/RosterPage";
-import { LootPage } from "./pages/LootPage";
+import { LootHubPage } from "./pages/LootHubPage";
 import { BisPage } from "./pages/BisPage";
-import { RaidNightPage } from "./pages/RaidNightPage";
 import { TierPage } from "./pages/TierPage";
 import { CharacterPage } from "./pages/CharacterPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -78,8 +77,7 @@ function Shell() {
         </div>
         <nav className="nav">
           <div className="nav-group">Рейд</div>
-          <NavLink to="/raid-night">Распределение</NavLink>
-          <NavLink to="/loot">Лут-таблицы</NavLink>
+          <NavLink to="/loot">Лут</NavLink>
           <div className="nav-group">Подготовка</div>
           <NavLink to="/roster">Ростер</NavLink>
           <NavLink to="/bis">BiS</NavLink>
@@ -104,8 +102,8 @@ function Shell() {
           <Route path="/" element={<Navigate to="/roster" replace />} />
           <Route path="/roster" element={<RosterPage />} />
           <Route path="/bis" element={<BisPage />} />
-          <Route path="/loot" element={<LootPage />} />
-          <Route path="/raid-night" element={<RaidNightPage />} />
+          <Route path="/loot/*" element={<LootHubPage />} />
+          <Route path="/raid-night" element={<Navigate to="/loot" replace />} />
           <Route path="/tier" element={<TierPage />} />
           <Route path="/character/:id" element={<CharacterPage />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -23,7 +23,7 @@ import { ItemIcon, ItemLink } from "../components/ItemLink";
 import { CharacterDrawer } from "../components/CharacterDrawer";
 import { useConfig } from "../lib/config-context";
 
-export function LootPage() {
+export function LootBrowse() {
   const { difficulty } = useDifficulty();
   const { config } = useConfig();
   const [status, setStatus] = useState<StaticDataStatus | null>(null);
@@ -37,6 +37,7 @@ export function LootPage() {
   const [search, setSearch] = useState("");
   const [wanters, setWanters] = useState<Record<number, ItemWanter[]>>({});
   const [selChar, setSelChar] = useState<number | null>(null);
+  const [onlyNeeded, setOnlyNeeded] = useState(false);
 
   const load = async () => {
     try {
@@ -91,6 +92,7 @@ export function LootPage() {
   }, []);
 
   const filterItem = (it: ItemRow): boolean => {
+    if (onlyNeeded && !(wanters[it.id] ?? []).some(wanterNeeds)) return false;
     if (filterSlot && it.slot !== filterSlot && !(filterSlot === "TOKEN" && it.contains)) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -112,30 +114,6 @@ export function LootPage() {
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: "space-between" }}>
-        <h1>Лут-таблицы — {seasonLabel}</h1>
-      </div>
-      <div className="card" style={{ padding: "10px 16px" }}>
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <div className="muted" style={{ fontSize: 13 }}>
-            {status ? (
-              <>
-                Справочник Raidbots <code>{status.build ?? "—"}</code> · предметов {status.items} · бонусов {status.bonuses}
-                {staleDays !== null && ` · обновлён ${staleDays} дн назад`}
-                {status.lastError && <span style={{ color: "var(--bad)" }}> · ошибка: {status.lastError}</span>}
-              </>
-            ) : (
-              "…"
-            )}
-          </div>
-          <div className="row">
-            <button disabled={busy || status?.refreshing} onClick={() => refresh(false)}>
-              {busy || status?.refreshing ? "Обновляю…" : "Проверить обновления"}
-            </button>
-            <button disabled={busy || status?.refreshing} onClick={() => refresh(true)}>Перекачать</button>
-          </div>
-        </div>
-      </div>
       {err && <div className="alert bad">{err}</div>}
 
       <div style={{ display: "grid", gridTemplateColumns: "230px 1fr", gap: 18 }}>
@@ -180,6 +158,9 @@ export function LootPage() {
               <option value="TOKEN">Тир-токены</option>
             </select>
             <input placeholder="Поиск предмета" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 220 }} />
+            <label className="row" style={{ gap: 6 }}>
+              <input type="checkbox" checked={onlyNeeded} onChange={(e) => setOnlyNeeded(e.target.checked)} /> только апгрейды кому-то
+            </label>
           </div>
 
           {!view ? (
@@ -201,6 +182,25 @@ export function LootPage() {
             })
           )}
         </section>
+      </div>
+      <div className="muted row" style={{ fontSize: 12, marginTop: 14, justifyContent: "space-between" }}>
+        <span>
+          {status ? (
+            <>
+              {seasonLabel} · справочник Raidbots <code>{status.build ?? "—"}</code> · предметов {status.items}
+              {staleDays !== null && ` · обновлён ${staleDays} дн назад`}
+              {status.lastError && <span style={{ color: "var(--bad)" }}> · ошибка: {status.lastError}</span>}
+            </>
+          ) : (
+            "…"
+          )}
+        </span>
+        <span className="row" style={{ gap: 6 }}>
+          <button style={{ padding: "1px 8px", fontSize: 11 }} disabled={busy || status?.refreshing} onClick={() => refresh(false)}>
+            {busy || status?.refreshing ? "Обновляю…" : "Проверить обновления"}
+          </button>
+          <button style={{ padding: "1px 8px", fontSize: 11 }} disabled={busy || status?.refreshing} onClick={() => refresh(true)}>Перекачать</button>
+        </span>
       </div>
       {selChar !== null && <CharacterDrawer id={selChar} onClose={() => setSelChar(null)} initialTab="bis" />}
     </div>
@@ -243,7 +243,12 @@ function ItemLine({ item, locale, wanters, onCharacter }: { item: ItemRow; local
               >
                 <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: OBTAINED_STYLE[w.obtained].color }} />
                 <span style={{ color: classColor(w.classId) }}>{w.name}</span>
-                {w.upgradePct != null && <span className="num" style={{ color: w.upgradePct > 0.05 ? "var(--ok)" : "var(--text-muted)" }}>{w.upgradePct > 0 ? "+" : ""}{w.upgradePct.toFixed(1)}%</span>}
+                {w.upgradePct != null ? (
+                  <span className="num" style={{ color: w.upgradePct > 0.05 ? "var(--ok)" : "var(--text-muted)" }}>{w.upgradePct > 0 ? "+" : ""}{w.upgradePct.toFixed(1)}%</span>
+                ) : w.ilvlDelta != null && w.obtained !== "yes" ? (
+                  <span className="num" style={{ color: w.ilvlDelta > 0 ? "var(--ok)" : "var(--text-muted)" }} title="разница ilvl к надетому (сима нет)">{w.ilvlDelta > 0 ? "+" : ""}{w.ilvlDelta} ilvl</span>
+                ) : null}
+                {w.alt?.gap != null && w.upgradePct != null && w.alt.gap > 0.05 && <span className="num" style={{ color: w.alt.gap >= 2 ? "var(--ok)" : w.alt.gap >= 0.8 ? "var(--warn)" : "var(--text-muted)" }} title="незаменимость: насколько лучше того, что можно нафармить самому (M+/крафт)">▲{w.alt.gap.toFixed(1)}</span>}
                 {w.rank > 1 && <span className="muted">#{w.rank}</span>}
               </span>
             ))}

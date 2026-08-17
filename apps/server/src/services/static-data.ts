@@ -110,6 +110,11 @@ export class StaticDataService {
       const prev = this.db.getMeta("static.build");
       const haveAll = FILES.every((f) => fs.existsSync(path.join(this.dir, f)));
       if (!force && prev === build && haveAll && this.status().items > 0) {
+        // справочник свежий, но сезон в конфиге мог быть сброшен — определить заново по кэшу
+        const s = this.config.get().season;
+        if (!s.raidInstanceIds.length || !s.dungeonInstanceIds.length || !s.seasonId) {
+          this.autoDetectSeason(JSON.parse(fs.readFileSync(path.join(this.dir, "instances.json"), "utf8")) as RaidbotsInstance[]);
+        }
         return { build, items: this.status().items, instances: this.status().instances, skipped: true };
       }
       for (const f of FILES) {

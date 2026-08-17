@@ -27,7 +27,9 @@ export class ConfigService {
 
   /** Глубокое слияние патча; пустые строки секретов не затирают существующие. */
   update(patchInput: unknown): AppConfig {
-    const patch = ConfigPatchSchema.parse(patchInput);
+    // zod при разборе частичного патча подставляет .default() соседним полям вложенных объектов
+    // (например, season.raidInstanceIds = []) — оставляем только те ключи, что реально пришли в патче
+    const patch = pruneToInput(ConfigPatchSchema.parse(patchInput), patchInput) as ConfigPatch;
     const merged = deepMerge(this.cfg as unknown as Record<string, unknown>, sanitizeSecrets(patch, this.cfg));
     this.cfg = AppConfigSchema.parse(merged);
     fs.writeFileSync(CONFIG_PATH, JSON.stringify(this.cfg, null, 2), "utf8");
@@ -45,6 +47,17 @@ function sanitizeSecrets(patch: ConfigPatch, current: AppConfig): Record<string,
     }
   }
   return p;
+}
+
+/** Оставить в разобранном патче только ключи, присутствовавшие во входных данных (рекурсивно). */
+export function pruneToInput(parsed: unknown, input: unknown): unknown {
+  if (!isPlainObject(parsed) || !isPlainObject(input)) return parsed;
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(input)) {
+    if (!(k in parsed)) continue;
+    out[k] = pruneToInput(parsed[k], input[k]);
+  }
+  return out;
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
